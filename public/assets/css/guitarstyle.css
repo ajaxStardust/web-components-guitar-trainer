@@ -1,0 +1,219 @@
+/* -------------------------------------------------- */
+/* Guitar Fretboard + Piano Trainer Dark Theme      */
+/* -------------------------------------------------- */
+
+/* Body and Layout */
+body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background-color: #1e1e1e;
+    color: #eee;
+    margin: 16px;
+}
+
+h2 {
+    text-align: center;
+    color: #f0f0f0;
+}
+
+/* Controls */
+#controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+#controls label {
+    font-weight: bold;
+}
+
+select {
+    margin-left: 4px;
+    margin-right: 16px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background-color: #2b2b2b;
+    color: #eee;
+}
+
+/* Layout */
+.row {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+guitar-fretboard {
+    display: inline-block;
+}
+
+/* Guitar Fretboard SVG */
+guitar-fretboard svg {
+    background: linear-gradient(to bottom, #3b2e2c, #1e1a18);
+    border: 2px solid #654321;
+    border-radius: 6px;
+}
+
+/* Strings */
+guitar-fretboard line {
+    stroke: #888;
+    stroke-width: 2;
+}
+
+guitar-fretboard line.string {
+    stroke: #bbb;
+    stroke-width: 1.5;
+}
+
+/* Notes */
+guitar-fretboard circle {
+    cursor: pointer;
+    stroke: #333;
+    stroke-width: 1.5px;
+    fill: rgba(255, 255, 255, 0.3); /* Default greyed-out tone */
+    transition: all 0.3s ease;
+}
+
+/* Chord / Highlighted Notes */
+guitar-fretboard circle.note-flash {
+    animation: flash 0.5s ease-in-out 3;
+}
+
+guitar-fretboard circle.note-tonic {
+    fill: #ffd700 !important; /* Tonic: bright gold */
+}
+
+guitar-fretboard circle.note-chord {
+    fill: #ff8c00 !important; /* Chord tones: amber */
+}
+
+guitar-fretboard circle[data-ghost] {
+    fill: rgba(255, 255, 255, 0.1); /* Unavailable notes */
+}
+
+@keyframes flash {
+    0% {
+        fill: #ffdd57;
+    }
+    50% {
+        fill: #ff7f50;
+    }
+    100% {
+        fill: #ffdd57;
+    }
+}
+
+/* Fret Numbers */
+guitar-fretboard text.fret-number {
+    fill: #ddd;
+    font-weight: bold;
+}
+
+/* Piano */
+#keyboard svg {
+    border: 2px solid #555;
+    border-radius: 6px;
+    background: #2b2b2b;
+}
+
+#keyboard rect.white {
+    fill: #eee;
+    stroke: #444;
+}
+
+#keyboard rect.black {
+    fill: #111;
+    stroke: #444;
+}
+
+#keyboard rect.flash {
+    fill: #ff8c00 !important; /* Flashing keys: amber */
+}
+
+#keyboard text {
+    fill: #222;
+    font-family: monospace;
+    pointer-events: none;
+}
+
+/* Note Panel */
+#note-panel {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    line-height: 1.5;
+    min-width: 220px;
+    padding: 10px 12px;
+    border: 1px solid #555;
+    border-radius: 10px;
+    background-color: #fafafa;
+    color: #333;
+}
+
+#note-panel .hint {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+/* Links */
+a {
+    color: #0b57d0;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 800px) {
+    .row {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+div#guitarboard {
+    background-color: #765;
+    padding: 16px;
+    border-radius: 8px;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+/* Note Panel Background Color */
+#note-panel {
+    background-color: #ccc;
+    color: #222;
+}
+
+/* Enhanced Visual Hierarchy */
+h2, #controls {
+    font-size: 1.2rem;
+    color: #f0f0f0;
+}
+
+guitar-fretboard {
+    max-width: 800px;
+}
+
+/* Nut */
+guitar-fretboard line.nut {
+    stroke: #fff;        /* bright, visible */
+    stroke-width: 6px;   /* thicker than frets */
+}
+
+/* Fret markers */
+guitar-fretboard circle.fret-marker {
+    fill: #fff;          /* white dots */
+    r: 4;                /* radius */
+    pointer-events: none; /* markers are visual only */
+}
+
+/* Double dot for 12th fret */
+guitar-fretboard circle.fret-marker.double {
+    r: 4;
+}
