@@ -1,23 +1,26 @@
 // assets/js/note-flashing.js
 
 export function flashMatchingNotes(fretboard, note) {
-  fretboard.tempFlashNotes.clear();
-  fretboard.tempFlashPitches.clear();
-  fretboard.tempFlashPitches.add(note);
+  if (!note) return;
+
+  const keyNote = note.toUpperCase();
+  const toFlash = new Set();
 
   for (let s = 1; s <= fretboard.strings; s++) {
     for (let f = 0; f <= fretboard.frets; f++) {
-      if (fretboard.scaleMap[s]?.[f] === note) {
-        fretboard.tempFlashNotes.add(`${s}-${f}`);
+      const n = fretboard.scaleMap[s]?.[f];
+      if (n && n.toUpperCase() === keyNote) {
+        toFlash.add(`${s}-${f}`);
       }
     }
   }
+
+  fretboard.tempFlashNotes = toFlash;
 
   fretboard.render();
 
   setTimeout(() => {
     fretboard.tempFlashNotes.clear();
-    fretboard.tempFlashPitches.clear();
     fretboard.render();
-  }, 500);
+  }, 250);
 }
