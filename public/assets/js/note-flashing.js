@@ -1,4 +1,5 @@
-// note-flashing.js
+// assets/js/note-flashing.js
+
 export function flashMatchingNotes(fretboard, note) {
   fretboard.tempFlashNotes.clear();
   fretboard.tempFlashPitches.clear();
@@ -13,6 +14,7 @@ export function flashMatchingNotes(fretboard, note) {
   }
 
   fretboard.render();
+
   setTimeout(() => {
     fretboard.tempFlashNotes.clear();
     fretboard.tempFlashPitches.clear();
