@@ -2,13 +2,9 @@
 <html lang="en">
 
 <head>
-    <!-- ========================= -->
-    <!-- CORE METADATA (UNCHANGED) -->
-    <!-- ========================= -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Interactive Guitar Fretboard + Piano Trainer</title>
-
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="shortcut icon" type="image/png" href="favicon.png">
 
@@ -40,51 +36,23 @@
 <body>
     <h2>Interactive Guitar Fretboard + Piano Trainer</h2>
 
-    <!-- ========================================================= -->
-    <!--  THREE‑SELECTOR CONTROL BAR (FUTURE‑PROOFED WITH COMMENTS) -->
-    <!-- ========================================================= -->
     <div id="controls">
+    <!-- TYPE SELECTOR (mode vs chord)
+         JS expects: #chordmode
+    -->
+    <label>Type:</label>
+    <select id="chordmode">
+        <option value="mode">Mode</option>
+        <option value="chord">Chord</option>
+    </select>
 
-        <!-- 1) TYPE SELECTOR -->
-        <label for="structure-type"><strong>Type:</strong></label>
-        <select id="structure-type" aria-label="Select structure type">
-            <option value="scale">Major Scale</option>
-            <option value="mode">Mode</option>
-            <option value="chord">Chord (Triad)</option>
-
-            <!-- ========================= -->
-            <!-- FUTURE TYPES (PLACEHOLDERS) -->
-            <!-- ========================= -->
-            <!-- <option value="pentatonic">Pentatonic</option> -->
-            <!-- <option value="seventh">7th Chords</option> -->
-            <!-- <option value="harmonic-minor">Harmonic Minor</option> -->
-            <!-- <option value="melodic-minor">Melodic Minor</option> -->
-            <!-- <option value="custom">Custom Interval Set</option> -->
-        </select>
-
-        <!-- 2) MODE / DEGREE SELECTOR -->
-        <label for="mode-degree"><strong>Mode / Degree:</strong></label>
-        <select id="mode-degree" aria-label="Select mode or degree">
-            <!-- Default: Mode list -->
-            <option value="ionian">Ionian (I)</option>
-            <option value="dorian">Dorian (ii)</option>
-            <option value="phrygian">Phrygian (iii)</option>
-            <option value="lydian">Lydian (IV)</option>
-            <option value="mixolydian">Mixolydian (V)</option>
-            <option value="aeolian">Aeolian (vi)</option>
-            <option value="locrian">Locrian (vii°)</option>
-
-            <!-- ========================= -->
-            <!-- FUTURE DEGREE SETS (PLACEHOLDERS) -->
-            <!-- ========================= -->
-            <!-- For Chords: I, ii, iii, IV, V, vi, vii° -->
-            <!-- For Pentatonics: Major / Minor -->
-            <!-- For 7th chords: IMaj7, ii7, V7, etc. -->
-            <!-- For Harmonic Minor Modes -->
-            <!-- For Melodic Minor Modes -->
-        </select>
-
-        <!-- 3) TONIC SELECTOR -->
+    <!-- DEGREE / MODE SELECTOR
+         JS expects: #degree
+         This dropdown is dynamically populated by ui-controller.js.
+    -->
+    <label>Degree:</label>
+    <select id="degree"></select>
+    
         <label for="tonic"><strong>Tonic:</strong></label>
         <select id="tonic" aria-label="Select tonic">
             <option value="C">C</option>
@@ -100,64 +68,23 @@
             <option value="A#">A#</option>
             <option value="B">B</option>
         </select>
-
-        <!-- ========================= -->
-        <!-- FUTURE ACCIDENTAL TOGGLE -->
-        <!-- ========================= -->
-        <!-- <label><input type="checkbox" id="accidental-toggle"> Use Flats</label> -->
-
-        <!-- ========================= -->
-        <!-- FUTURE CONTROL BAR EXPANSION -->
-        <!-- ========================= -->
-        <!-- <div id="advanced-controls"></div> -->
-        <!-- <div id="quiz-controls"></div> -->
-        <!-- <div id="analysis-controls"></div> -->
     </div>
 
-    <!-- ========================= -->
-    <!-- GUITAR + NOTE PANEL AREA -->
-    <!-- ========================= -->
+    <div id="theory-row" class="row">
+        <piano-keyboard></piano-keyboard>
+        <note-panel></note-panel>
+    </div>
+
     <div id="guitarboard" class="row">
-
-        <!-- Guitar Fretboard Component -->
-        <guitar-fretboard frets="12"></guitar-fretboard>
-
-        <!-- Legacy Note Panel -->
-        <div id="note-panel" aria-live="polite">
-            <div class="hint">Click a highlighted note to toggle it.</div>
-            <div id="note-panel-content"></div>
-        </div>
-
-        <!-- ========================= -->
-        <!-- FUTURE MODULE PLACEHOLDERS -->
-        <!-- ========================= -->
-        <!-- <interval-trainer></interval-trainer> -->
-        <!-- <scale-degree-analyzer></scale-degree-analyzer> -->
-        <!-- <chord-quality-view></chord-quality-view> -->
+        <guitar-fretboard frets="15"></guitar-fretboard>
     </div>
 
-    <!-- ========================= -->
-    <!-- PIANO KEYBOARD -->
-    <!-- ========================= -->
-    <piano-keyboard></piano-keyboard>
+    <div id="fretmarkers" class="row">
+        <guitar-fret-markers frets="15"></guitar-fret-markers>
+    </div>
 
-    <!-- ========================= -->
-    <!-- FUTURE INSTRUMENT MODULES -->
-    <!-- ========================= -->
-    <!-- <bass-fretboard></bass-fretboard> -->
-    <!-- <ukulele-fretboard></ukulele-fretboard> -->
-    <!-- <keyboard-extended></keyboard-extended> -->
-
-    <!-- ========================= -->
-    <!-- JAVASCRIPT MODULE LOADER -->
-    <!-- ========================= -->
-    <script type="module" src="assets/js/ui-controller.js"></script>
-
-    <!-- ========================= -->
-    <!-- FUTURE SCRIPT HOOKS -->
-    <!-- ========================= -->
-    <!-- <script type="module" src="assets/js/quiz-controller.js"></script> -->
-    <!-- <script type="module" src="assets/js/analysis-engine.js"></script> -->
+    <!-- Load JavaScript Modules -->
+    <script type="module" src="assets/js/main.js"></script>
 </body>
 
 </html>

@@ -1,111 +1,91 @@
-// assets/js/ui-controller.js
+// ui-controller.js
 //
-// Central UI orchestrator for the Interactive Guitar + Piano Trainer.
-// Handles:
-//   • TYPE selector (scale / mode / chord)
-//   • MODE/DEGREE selector (dynamic meaning)
-//   • TONIC selector
-//   • Dispatching updates to guitar-fretboard
-//   • Dispatching updates to piano-keyboard
-//   • Updating the legacy note panel
+// ─────────────────────────────────────────────────────────────
+//  LLM-FRIENDLY NOTE — READ THIS BEFORE TOUCHING ANYTHING
+// ─────────────────────────────────────────────────────────────
 //
-// This file is future‑proofed with clear extension points for:
-//   • Pentatonics
-//   • 7th chords
-//   • Harmonic/Melodic minor modes
-//   • Custom interval sets
-//   • Additional instruments
-//   • Analysis engines
+//  THESE ARE THE ONLY VALID UI ELEMENT IDS IN THIS PROJECT:
+//
+//      #chordmode   ← Type selector (mode / chord)
+//      #degree      ← Degree selector (1–7)
+//      #tonic       ← Tonic selector (C, C#, D, Eb, …)
+//
+//  DO NOT invent new IDs.
+//  DO NOT rename these IDs.
+//  DO NOT query anything else.
+//
+//  If these IDs do not match the HTML, the ENTIRE APP BREAKS:
+//      • degree dropdown will be empty
+//      • controller will abort
+//      • fretboard will not render
+//      • piano will not render
+//      • note panel will not render
+//
+//  This has already happened multiple times.
+//  Do not repeat this mistake.
+//
+// ─────────────────────────────────────────────────────────────
 //
 
-import "./guitar-fretboard.js";
-import "./piano-keyboard.js";
-import "./note-panel.js";
+export function initUIController(onChange) {
 
-document.addEventListener("DOMContentLoaded", () => {
+    // ─────────────────────────────────────────────────────────
+    //  LLM NOTE: These MUST match the HTML exactly.
+    // ─────────────────────────────────────────────────────────
+    const typeSelect = document.querySelector("#chordmode");
+    const degreeSelect = document.querySelector("#degree");
+    const tonicSelect = document.querySelector("#tonic");
 
-  const typeSelect = document.getElementById("structure-type");
-  const modeDegreeSelect = document.getElementById("mode-degree");
-  const tonicSelect = document.getElementById("tonic");
-
-  const fretboard = document.querySelector("guitar-fretboard");
-  const piano = document.querySelector("piano-keyboard");
-  const notePanel = document.querySelector("note-panel");
-
-  if (!fretboard) {
-    console.error("ERROR: <guitar-fretboard> not found.");
-    return;
-  }
-
-  const MODE_OPTIONS = [
-    { value: "ionian", label: "Ionian (I)" },
-    { value: "dorian", label: "Dorian (ii)" },
-    { value: "phrygian", label: "Phrygian (iii)" },
-    { value: "lydian", label: "Lydian (IV)" },
-    { value: "mixolydian", label: "Mixolydian (V)" },
-    { value: "aeolian", label: "Aeolian (vi)" },
-    { value: "locrian", label: "Locrian (vii°)" }
-  ];
-
-  const DEGREE_OPTIONS = [
-    { value: "I", label: "I (Major)" },
-    { value: "ii", label: "ii (minor)" },
-    { value: "iii", label: "iii (minor)" },
-    { value: "IV", label: "IV (Major)" },
-    { value: "V", label: "V (Major)" },
-    { value: "vi", label: "vi (minor)" },
-    { value: "vii°", label: "vii° (dim)" }
-  ];
-
-  const PENTATONIC_OPTIONS = [];
-  const SEVENTH_CHORD_OPTIONS = [];
-
-  function populateSelect(selectEl, options) {
-    selectEl.innerHTML = "";
-    for (const opt of options) {
-      const o = document.createElement("option");
-      o.value = opt.value;
-      o.textContent = opt.label;
-      selectEl.appendChild(o);
-    }
-  }
-
-  function handleTypeChange() {
-    const type = typeSelect.value;
-
-    if (type === "scale") {
-      modeDegreeSelect.disabled = true;
-      populateSelect(modeDegreeSelect, MODE_OPTIONS);
-    }
-    else if (type === "mode") {
-      modeDegreeSelect.disabled = false;
-      populateSelect(modeDegreeSelect, MODE_OPTIONS);
-    }
-    else if (type === "chord") {
-      modeDegreeSelect.disabled = false;
-      populateSelect(modeDegreeSelect, DEGREE_OPTIONS);
+    if (!typeSelect || !degreeSelect || !tonicSelect) {
+        console.error("UI Controller ERROR: One or more required selectors (#chordmode, #degree, #tonic) were NOT found in the DOM.");
+        return;
     }
 
-    dispatchUpdate();
-  }
+    // ─────────────────────────────────────────────────────────
+    //  Populate degree dropdown (1–7)
+    //  LLM NOTE: This MUST run or the dropdown will be empty.
+    // ─────────────────────────────────────────────────────────
+    function populateDegree() {
+        degreeSelect.innerHTML = "";
+        for (let d = 1; d <= 7; d++) {
+            const opt = document.createElement("option");
+            opt.value = String(d);
+            opt.textContent = `Degree ${d}`;
+            degreeSelect.appendChild(opt);
+        }
+    }
 
-  function dispatchUpdate() {
-    const type = typeSelect.value;
-    const mode = modeDegreeSelect.value;
-    const tonic = tonicSelect.value;
+    // Emit current UI state to main.js
+    function emit() {
+        onChange({
+            type: typeSelect.value,
+            degree: degreeSelect.value,
+            tonic: tonicSelect.value
+        });
+    }
 
-    fretboard.setStructure({ type, mode, tonic });
+    // ─────────────────────────────────────────────────────────
+    //  INITIAL DEFAULTS
+    //  LLM NOTE: These defaults are intentional.
+    //            Do NOT remove or change without reason.
+    // ─────────────────────────────────────────────────────────
+    typeSelect.value = "mode";
+    populateDegree();
+    degreeSelect.value = "1";
+    tonicSelect.value = "G";
 
-    if (piano?.updateHighlights)
-      piano.updateHighlights({ type, mode, tonic });
+    // ─────────────────────────────────────────────────────────
+    //  Event listeners
+    // ─────────────────────────────────────────────────────────
+    typeSelect.addEventListener("change", () => {
+        populateDegree();       // refresh degree list
+        degreeSelect.value = "1";
+        emit();
+    });
 
-    if (notePanel?.update)
-      notePanel.update(tonic, mode, type);
-  }
+    degreeSelect.addEventListener("change", emit);
+    tonicSelect.addEventListener("change", emit);
 
-  typeSelect.addEventListener("change", handleTypeChange);
-  modeDegreeSelect.addEventListener("change", dispatchUpdate);
-  tonicSelect.addEventListener("change", dispatchUpdate);
-
-  handleTypeChange();
-});
+    // Initial render
+    emit();
+}

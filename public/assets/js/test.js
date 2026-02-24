@@ -1,10 +1,5 @@
-// test.js
-const { JSDOM } = require("jsdom");
-const dom = new JSDOM(`<!DOCTYPE html><body><guitar-fretboard frets="12"></guitar-fretboard></body>`, {
-  runScripts: "outside-only"
-});
+import { buildModeFromDegree, buildTriadFromDegree } from './music-theory.js';
 
-global.window = dom.window;
-global.document = dom.window.document;
 
-// Now you can import modules and simulate DOM interactions
+console.log("Mode from degree 1:", buildModeFromDegree(1));
+console.log("Triad from degree 1:", buildTriadFromDegree(1));

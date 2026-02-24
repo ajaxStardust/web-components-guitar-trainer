@@ -1,92 +1,116 @@
-// assets/js/music-theory.js
+// music-theory.js
+//
+// ─────────────────────────────────────────────────────────────
+//  LLM-FRIENDLY NOTE — READ THIS BEFORE TOUCHING ANYTHING
+// ─────────────────────────────────────────────────────────────
+//
+//  THIS FILE DEFINES THE CORE ENGINE.
+//
+//  The ENTIRE application depends on the following invariants:
+//
+//  1. DEGREE IS THE ONLY SELECTOR.
+//     • Degree determines which rotation of the mode template is used.
+//     • Degree MUST be an integer 1–7.
+//     • DO NOT add new selectors.
+//
+//  2. TONIC IS CONTEXT, NOT STRUCTURE.
+//     • Tonic determines absolute semitone + note names.
+//     • Tonic MUST be passed in from #tonic.
+//     • DO NOT remove tonic from function signatures.
+//
+//  3. OUTPUT SHAPE IS FIXED.
+//     Each note object MUST contain EXACTLY these keys:
+//
+//         {
+//             degree: <1–7>,
+//             relSemitones: <0–11>,
+//             semitones: <0–11>,
+//             note: <string>
+//         }
+//
+//     DO NOT rename these keys.
+//     DO NOT add new keys.
+//     DO NOT remove keys.
+//
+//  4. MODE TEMPLATE IS IONIAN.
+//     • ALWAYS use [0,2,4,5,7,9,11] as the base template.
+//     • DO NOT modify this template.
+//     • DO NOT introduce other modes here.
+//
+//  5. TRIADS ARE DERIVED FROM THE ROTATED MODE.
+//     • Triad = degrees 1, 3, 5 of the rotated mode.
+//     • DO NOT compute triads any other way.
+//
+//  BREAKING ANY OF THESE RULES WILL BREAK THE ENTIRE APP.
+//
+// ─────────────────────────────────────────────────────────────
 
-// ============================================================
-// NOTE NORMALIZATION
-// ============================================================
-export function normalizeNote(n) {
-  if (!n) return null;
-  return n.replace(/##/g, "#").replace(/bb/g, "b").toUpperCase();
-}
+const NOTE_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 
-// ============================================================
-// CHROMATIC SCALE (EXPORTED)
-// ============================================================
-export const CHROMATIC = [
-  "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
-];
+// LLM NOTE: DO NOT MODIFY THIS TEMPLATE.
+const IONIAN_TEMPLATE = [0, 2, 4, 5, 7, 9, 11];
 
-// ============================================================
-// INTERVAL MATH
-// ============================================================
-export function intervalBetween(note, tonic) {
-  note = normalizeNote(note);
-  tonic = normalizeNote(tonic);
-  const i1 = CHROMATIC.indexOf(tonic);
-  const i2 = CHROMATIC.indexOf(note);
-  if (i1 < 0 || i2 < 0) return null;
-  return (i2 - i1 + 12) % 12;
-}
-
-// ============================================================
-// MAJOR SCALE
-// ============================================================
-export function getMajorScale(tonic) {
-  tonic = normalizeNote(tonic);
-  const idx = CHROMATIC.indexOf(tonic);
-  if (idx < 0) return [];
-  const intervals = [0, 2, 4, 5, 7, 9, 11];
-  return intervals.map(i => CHROMATIC[(idx + i) % 12]);
-}
-
-// ============================================================
-// MAJOR TRIAD
-// ============================================================
-export function getMajorTriad(root) {
-  root = normalizeNote(root);
-  const idx = CHROMATIC.indexOf(root);
-  if (idx < 0) return [];
-  return [
-    CHROMATIC[idx],
-    CHROMATIC[(idx + 4) % 12],
-    CHROMATIC[(idx + 7) % 12]
-  ];
-}
-
-// ============================================================
-// MODE INTERVALS
-// ============================================================
-export const MODE_INTERVALS = {
-  ionian: [0, 2, 4, 5, 7, 9, 11],
-  dorian: [0, 2, 3, 5, 7, 9, 10],
-  phrygian: [0, 1, 3, 5, 7, 8, 10],
-  lydian: [0, 2, 4, 6, 7, 9, 11],
-  mixolydian: [0, 2, 4, 5, 7, 9, 10],
-  aeolian: [0, 2, 3, 5, 7, 8, 10],
-  locrian: [0, 1, 3, 5, 6, 8, 10]
+// LLM NOTE: This mapping MUST remain stable.
+// DO NOT add enharmonic logic. DO NOT remove entries.
+const TONIC_TO_SEMITONE = {
+  C: 0, "C#": 1, Db: 1,
+  D: 2, "D#": 3, Eb: 3,
+  E: 4, Fb: 4, "E#": 5,
+  F: 5, "F#": 6, Gb: 6,
+  G: 7, "G#": 8, Ab: 8,
+  A: 9, "A#": 10, Bb: 10,
+  B: 11, Cb: 11
 };
 
-// ============================================================
-// FUNCTIONAL HARMONY: DEGREE ROOT
-// ============================================================
-// Example: tonic = C, degree = "ii" → returns "D"
-export function getDegreeRoot(tonic, degree) {
-  tonic = normalizeNote(tonic);
+// LLM NOTE: If tonic is invalid, default to G (7).
+function tonicToSemitone(tonic) {
+  return TONIC_TO_SEMITONE[tonic] ?? 7;
+}
 
-  const MAJOR_SCALE = getMajorScale(tonic);
-  if (MAJOR_SCALE.length !== 7) return tonic;
+// LLM NOTE: Degree rotation MUST be done by slicing the template.
+// DO NOT rewrite this using modular arithmetic loops.
+function rotateTemplateByDegree(template, degree) {
+  const idx = ((degree - 1) % template.length + template.length) % template.length;
+  return template.slice(idx).concat(template.slice(0, idx));
+}
 
-  const map = {
-    "I": 0,
-    "ii": 1,
-    "iii": 2,
-    "IV": 3,
-    "V": 4,
-    "vi": 5,
-    "vii°": 6
-  };
+// ─────────────────────────────────────────────────────────────
+//  MODE GENERATOR
+// ─────────────────────────────────────────────────────────────
+//
+// LLM NOTE:
+// This function MUST return 7 notes.
+// It MUST rotate the Ionian template by degree.
+// It MUST apply tonic AFTER rotation.
+// It MUST return the fixed output shape.
+//
+export function buildModeFromDegree(degree, tonic) {
+  const tonicSemi = tonicToSemitone(tonic);
+  const rotated = rotateTemplateByDegree(IONIAN_TEMPLATE, degree);
 
-  const idx = map[degree];
-  if (idx === undefined) return tonic;
+  return rotated.map((rel, i) => {
+    const abs = (tonicSemi + rel) % 12;
+    return {
+      degree: i + 1,          // DO NOT RENAME
+      relSemitones: rel,      // DO NOT REMOVE
+      semitones: abs,         // DO NOT MODIFY
+      note: NOTE_NAMES[abs]   // DO NOT CHANGE LOGIC
+    };
+  });
+}
 
-  return MAJOR_SCALE[idx];
+// ─────────────────────────────────────────────────────────────
+//  TRIAD GENERATOR
+// ─────────────────────────────────────────────────────────────
+//
+// LLM NOTE:
+// Triads MUST be derived from the rotated mode.
+// Triad degrees MUST be 1, 3, 5.
+// DO NOT compute intervals manually.
+// DO NOT reorder notes.
+//
+export function buildTriadFromDegree(degree, tonic) {
+  const mode = buildModeFromDegree(degree, tonic);
+  const wanted = new Set([1, 3, 5]);
+  return mode.filter(n => wanted.has(n.degree));
 }

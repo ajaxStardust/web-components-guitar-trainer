@@ -1,0 +1,8 @@
+
+\nStarting file_loader.php
+
+Exception: Undefined constant "Adb\Model\NS_ROOT" in /www/wwwroot/guitartrainer.lan/src/Model/Jsonconfigmanager.php on line 16
+
+Stack trace: #0 /www/wwwroot/guitartrainer.lan/src/Model/Adbsoc.php(32): Adb\Model\Jsonconfigmanager->__construct()
+#1 /www/wwwroot/guitartrainer.lan/public/file_loader.php(49): Adb\Model\Adbsoc->__construct()
+#2 {main}

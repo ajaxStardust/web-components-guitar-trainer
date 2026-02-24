@@ -1,374 +1,261 @@
-// assets/js/guitar-fretboard.js
+// guitar-fretboard.js
+//
+// ─────────────────────────────────────────────────────────────
+//  LLM-FRIENDLY NOTE — READ THIS BEFORE TOUCHING ANYTHING
+// ─────────────────────────────────────────────────────────────
+//
+//  THIS CUSTOM ELEMENT IS <guitar-fretboard> IN THE HTML.
+//
+//  CONTRACT WITH THE REST OF THE APP:
+//
+//    • main.js WILL CALL:
+//          guitarElement.setAnswerKey(answerKey, context)
+//
+//    • answerKey IS AN ARRAY OF NOTE OBJECTS FROM music-theory.js:
+//          {
+//              degree: <1–7>,
+//              relSemitones: <0–11>,
+//              semitones: <0–11>,
+//              note: <string>
+//          }
+//
+//    • context IS AN OBJECT:
+//          {
+//              type: "mode" | "chord",
+//              degree: <number>,
+//              tonic: <string>
+//          }
+//
+//  DO NOT:
+//    • Rename setAnswerKey
+//    • Change its parameter order
+//    • Expect any other shape for answerKey or context
+//
+//  RENDERING RULE:
+//
+//    • Highlight any fret whose semitone is in answerKey.semitones
+//    • Show NOTE NAMES on highlighted frets
+//
+//  If you change this behavior, the trainer stops being predictable.
+//
+// ─────────────────────────────────────────────────────────────
 
-import { DEFAULT_STRINGS, ABSOLUTE_SCALE_MAP } from "./fretboard-data.js";
-import { PIANO_KEYS } from "./piano-data.js";
-import {
-  getMajorScale,
-  getMajorTriad,
-  MODE_INTERVALS,
-  intervalBetween,
-  normalizeNote,
-  getDegreeRoot
-} from "./music-theory.js";
-import { flashMatchingNotes } from "./note-flashing.js";
+const NOTE_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 
-const MODE_NAMES = [
-  "ionian",
-  "dorian",
-  "phrygian",
-  "lydian",
-  "mixolydian",
-  "aeolian",
-  "locrian"
-];
+// LLM NOTE: Standard tuning E A D G B E (low to high).
+// Values are absolute semitone classes relative to C.
+const STRING_OPEN_SEMITONES = [4, 9, 2, 7, 11, 4]; // E A D G B E
+
+// LLM NOTE: This is the visual fret range. You can change it via attribute if needed.
+const DEFAULT_FRETS = 15;
 
 export class GuitarFretboard extends HTMLElement {
-  static get observedAttributes() { return ["frets"]; }
-
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-
-    this.strings = DEFAULT_STRINGS;
-    this.frets = parseInt(this.getAttribute("frets"), 10) || 12;
-
-    this.viewMode = "scale";     // "scale" | "chord" | mode-name
-    this.currentTonic = "C";
-    this.currentDegree = "I";    // for chord mode
-    this.viewDetail = "mode";    // "mode" | "chord"
-
-    this.scaleMap = ABSOLUTE_SCALE_MAP;
-    this.pianoKeys = PIANO_KEYS;
-
-    this.highlighted = new Set();
-    this.activePerString = new Map();
-    this.wrongIndicators = new Map();
-
-    for (let s = 1; s <= this.strings; s++) {
-      this.activePerString.set(s, new Set());
-      this.wrongIndicators.set(s, new Set());
-    }
-
-    this.tempFlashNotes = new Set();
-    this.tempFlashPitches = new Set();
+    this.answerKey = [];
+    this.context = null;
+    this._clickHandlerAttached = false; // LLM NOTE: ensure we only wire events once.
+    this.flashNote = null;              // LLM NOTE: optional transient flash target (note name).
+    this._flashTimeoutId = null;
   }
 
-  connectedCallback() {
-    this.recomputeHighlights();
+  // ─────────────────────────────────────────────────────────
+  //  OPTIONAL PUBLIC API — flashNote(noteName)
+  // ─────────────────────────────────────────────────────────
+  //
+  //  LLM NOTE:
+  //  • This method is OPTIONAL and purely visual.
+  //  • It does NOT change answerKey or context.
+  //  • It triggers a short-lived overlay that circles every fret position
+  //    whose semitone matches the given note name (C, C#, D, ...).
+  //
+  //  Used by:
+  //      • main.js when a fretboard dot or piano key is clicked.
+  //
+  flashNote(noteName) {
+    if (!noteName || !NOTE_NAMES.includes(noteName)) return;
+
+    // Normalize and schedule transient flash.
+    this.flashNote = noteName;
+    if (this._flashTimeoutId) {
+      clearTimeout(this._flashTimeoutId);
+    }
     this.render();
-    this.emitNoteChange();
-  }
-
-  // ============================================================
-  // NEW: Unified API for controller
-  // ============================================================
-  setStructure({ type, mode, tonic }) {
-    this.currentTonic = normalizeNote(tonic);
-
-    if (type === "scale") {
-      this.viewMode = "scale";
-    }
-
-    else if (type === "mode") {
-      this.viewMode = mode; // ionian, dorian, etc.
-    }
-
-    else if (type === "chord") {
-      this.viewMode = "chord";
-      this.currentDegree = mode; // I, ii, iii, etc.
-    }
-
-    this.clearActive();
-    this.recomputeHighlights();
-    this.render();
-    this.emitNoteChange();
-  }
-
-  // ============================================================
-  // Legacy API (still used internally)
-  // ============================================================
-  setViewMode(mode) {
-    this.viewMode = mode;
-    this.clearActive();
-    this.recomputeHighlights();
-    this.render();
-    this.emitNoteChange();
-  }
-
-  setViewDetail(detail) {
-    this.viewDetail = detail === "chord" ? "chord" : "mode";
-    this.render();
-  }
-
-  setTonic(note) {
-    this.currentTonic = normalizeNote(note);
-    this.clearActive();
-    this.recomputeHighlights();
-    this.render();
-    this.emitNoteChange();
-  }
-
-  clearActive() {
-    this.activePerString.forEach(set => set.clear());
-  }
-
-  // ============================================================
-  // Highlight computation
-  // ============================================================
-  recomputeHighlights() {
-    this.highlighted.clear();
-
-    const tonic = this.currentTonic;
-
-    // ---------------------------
-    // SCALE VIEW
-    // ---------------------------
-    if (this.viewMode === "scale") {
-      const notes = getMajorScale(tonic);
-      this.applyHighlightList(notes);
-      return;
-    }
-
-    // ---------------------------
-    // CHORD VIEW (functional)
-    // ---------------------------
-    if (this.viewMode === "chord") {
-      const root = getDegreeRoot(tonic, this.currentDegree);
-      const notes = getMajorTriad(root);
-      this.applyHighlightList(notes);
-      return;
-    }
-
-    // ---------------------------
-    // MODE VIEW
-    // ---------------------------
-    if (MODE_NAMES.includes(this.viewMode)) {
-      const modeIntervals = MODE_INTERVALS[this.viewMode];
-      if (!modeIntervals) return;
-
-      let tonicFret = null;
-      for (let f = 0; f <= this.frets; f++) {
-        if (normalizeNote(this.scaleMap[6]?.[f]) === tonic) {
-          tonicFret = f;
-          break;
-        }
-      }
-      if (tonicFret === null) return;
-
-      const WINDOW = 4;
-
-      for (let s = 1; s <= this.strings; s++) {
-        for (let f = 0; f <= this.frets; f++) {
-          if (Math.abs(f - tonicFret) > WINDOW) continue;
-
-          const note = this.scaleMap[s]?.[f];
-          if (!note) continue;
-
-          const interval = intervalBetween(note, tonic);
-          if (interval === null) continue;
-
-          if (modeIntervals.includes(interval)) {
-            this.highlighted.add(`${s}-${f}`);
-          }
-        }
-      }
-    }
-  }
-
-  // ============================================================
-  // Helper: highlight all notes in list
-  // ============================================================
-  applyHighlightList(notes) {
-    for (let s = 1; s <= this.strings; s++) {
-      for (let f = 0; f <= this.frets; f++) {
-        if (notes.includes(this.scaleMap[s]?.[f])) {
-          this.highlighted.add(`${s}-${f}`);
-        }
-      }
-    }
-  }
-
-  attributeChangedCallback(name, oldValue, newValue) {
-    if (name === "frets" && oldValue !== newValue) {
-      const parsed = parseInt(newValue, 10);
-      this.frets = Number.isFinite(parsed) ? parsed : 12;
+    this._flashTimeoutId = setTimeout(() => {
+      this.flashNote = null;
       this.render();
-      this.emitNoteChange();
-    }
+    }, 250);
   }
 
-  emitNoteChange() {
-    const active = {};
-    for (let s = 1; s <= this.strings; s++) {
-      active[s] = [...this.activePerString.get(s)].sort((a, b) => a - b);
-    }
-
-    const detail = {
-      activePerString: active,
-      scaleMap: this.scaleMap,
-      strings: this.strings,
-      viewMode: this.viewMode,
-      tonic: this.currentTonic,
-      degree: this.currentDegree
-    };
-
-    window.dispatchEvent(new CustomEvent("notechange", { detail }));
+  // ─────────────────────────────────────────────────────────
+  //  PUBLIC API — DO NOT RENAME
+  // ─────────────────────────────────────────────────────────
+  //
+  //  main.js calls:
+  //      guitar.setAnswerKey(answerKey, context)
+  //
+  setAnswerKey(answerKey, context) {
+    this.answerKey = Array.isArray(answerKey) ? answerKey : [];
+    this.context = context || null;
+    this.render();
   }
 
-  // ============================================================
-  // Interval-aware degree info
-  // ============================================================
-  getDegreeInfo(note) {
-    const tonic = this.currentTonic;
-    const modeIntervals =
-      MODE_INTERVALS[this.viewMode] || MODE_INTERVALS["ionian"];
-
-    const interval = intervalBetween(note, tonic);
-    if (interval === null) return null;
-
-    const idx = modeIntervals.indexOf(interval);
-    if (idx === -1) return null;
-
-    const degree = idx + 1;
-    let quality = null;
-
-    if (degree === 3) {
-      if (interval === 4) quality = "major";
-      if (interval === 3) quality = "minor";
-    }
-
-    return { degree, quality };
-  }
-
-  // ============================================================
-  // Rendering
-  // ============================================================
+  // ─────────────────────────────────────────────────────────
+  //  RENDER
+  // ─────────────────────────────────────────────────────────
   render() {
-    const width = 720;
-    const height = 180;
-    const svgNS = "http://www.w3.org/2000/svg";
+    const fretsAttr = Number(this.getAttribute("frets"));
+    const frets = Number.isFinite(fretsAttr) && fretsAttr > 0 ? fretsAttr : DEFAULT_FRETS;
 
-    while (this.shadowRoot.firstChild) {
-      this.shadowRoot.removeChild(this.shadowRoot.firstChild);
+    // LLM NOTE:
+    // allowed = set of absolute semitone classes to highlight for the current
+    // answerKey (mode / triad). flashSemi is an OPTIONAL extra pitch class
+    // used for a transient "flash all X's" overlay when a note is clicked.
+    const allowed = new Set(this.answerKey.map(n => n.semitones));
+    const flashSemi =
+      this.flashNote && NOTE_NAMES.includes(this.flashNote)
+        ? NOTE_NAMES.indexOf(this.flashNote)
+        : -1;
+
+    const width = 1000;
+    const height = 260;
+    const fretWidth = width / frets;
+    const stringHeight = height / (STRING_OPEN_SEMITONES.length + 1);
+    const stringCount = STRING_OPEN_SEMITONES.length;
+
+    // LLM NOTE (PEDAGOGY / ORIENTATION):
+    // The tuning array above is ordered LOW → HIGH (6th string to 1st string).
+    // Visually, we MUST draw lower tones closer to the bottom of the viewport.
+    // Therefore: string index 0 (low E) is drawn at the BOTTOM, not the top.
+    const yForStringIndex = (sIdx) => (stringCount - sIdx) * stringHeight;
+
+    const svgParts = [];
+    svgParts.push(`<svg viewBox="0 0 ${width} ${height}" width="100%" height="100%">`);
+
+    // Frets
+    for (let f = 0; f <= frets; f++) {
+      const x = f * fretWidth;
+      const strokeWidth = f === 0 ? 4 : 1;
+      svgParts.push(
+        `<line x1="${x}" y1="0" x2="${x}" y2="${height}" stroke="#999" stroke-width="${strokeWidth}"/>`
+      );
     }
 
-    const style = document.createElement("style");
-    style.textContent = `
-      :host { display: block; width: 100%; min-height: 200px; }
-      svg { width: 100%; height: auto; background: #f9f3e8; border: 2px solid #a67c52; border-radius: 6px; user-select: none; }
-      line.string { stroke: #555; stroke-width: 2; }
-      line.fret { stroke: #777; stroke-width: 2; }
-      line.nut { stroke: #000; stroke-width: 6; }
+    // Strings
+    STRING_OPEN_SEMITONES.forEach((_, i) => {
+      const y = yForStringIndex(i);
+      svgParts.push(
+        `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="#666" stroke-width="2"/>`
+      );
+    });
 
-      circle.note-scale { fill: rgba(0,120,220,0.65); stroke: #222; stroke-width: 1.5; }
-      circle.note-chord { fill: #cc6a00; stroke: #222; stroke-width: 1.5; }
-      circle.note-tonic { fill: #d4a017; stroke: #222; stroke-width: 1.5; }
+    // Notes
+    // LLM NOTE (PEDAGOGY):
+    // We do NOT print note names on the fretboard itself. The student should
+    // discover note identities by cross‑referencing the piano + table. We
+    // still encode the note name as data-note for click handling, but keep
+    // the visual dots anonymous.
+    STRING_OPEN_SEMITONES.forEach((openSemi, sIdx) => {
+      const y = yForStringIndex(sIdx);
+      for (let f = 0; f <= frets; f++) {
+        const x = f * fretWidth + fretWidth / 2;
+        const sem = (openSemi + f) % 12;
 
-      circle.flash-dot { fill: #ff8c00; stroke: #222; stroke-width: 1.5; animation: flashBlink 0.5s ease-in-out; }
+        if (allowed.has(sem)) {
+          const note = NOTE_NAMES[sem];
+          const r = stringHeight * 0.3;
 
-      circle.note-degree-1 { fill: #FFB000; stroke: #222; stroke-width: 1.5; }
-      circle.note-degree-3-major { fill: #4CAF50; stroke: #222; stroke-width: 1.5; }
-      circle.note-degree-3-minor { fill: #8BC34A; stroke: #222; stroke-width: 1.5; }
-      circle.note-degree-5 { fill: #4A90E2; stroke: #222; stroke-width: 1.5; }
-      circle.note-degree-greyed { fill: #CCCCCC; stroke: #666; stroke-width: 1.2; opacity: 0.7; }
-
-      @keyframes flashBlink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
-    `;
-    this.shadowRoot.appendChild(style);
-
-    const svg = document.createElementNS(svgNS, "svg");
-    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-
-    const stringSpacing = height / (this.strings + 1);
-    const fretSpacing = width / (this.frets + 1);
-
-    for (let s = 1; s <= this.strings; s++) {
-      const y = stringSpacing * s;
-      const line = document.createElementNS(svgNS, "line");
-      line.setAttribute("x1", 0);
-      line.setAttribute("y1", y);
-      line.setAttribute("x2", width);
-      line.setAttribute("y2", y);
-      line.setAttribute("class", "string");
-      svg.appendChild(line);
-    }
-
-    for (let f = 0; f <= this.frets; f++) {
-      const x = fretSpacing * (f + 1);
-      const line = document.createElementNS(svgNS, "line");
-      line.setAttribute("x1", x);
-      line.setAttribute("y1", stringSpacing);
-      line.setAttribute("x2", x);
-      line.setAttribute("y2", height - stringSpacing);
-      line.setAttribute("class", f === 0 ? "nut" : "fret");
-      svg.appendChild(line);
-    }
-
-    for (let s = 1; s <= this.strings; s++) {
-      for (let f = 0; f <= this.frets; f++) {
-        const key = `${s}-${f}`;
-        const cx = fretSpacing * (f + 0.5);
-        const cy = stringSpacing * s;
-
-        const circle = document.createElementNS(svgNS, "circle");
-        circle.setAttribute("cx", cx);
-        circle.setAttribute("cy", cy);
-        circle.setAttribute("r", 10);
-
-        const note = this.scaleMap[s]?.[f];
-
-        if (this.tempFlashNotes.has(key)) {
-          circle.setAttribute("class", "flash-dot");
+          svgParts.push(`
+                        <g data-note="${note}">
+                            <circle cx="${x}" cy="${y}" r="${r}" fill="#ffbb33" stroke="#333"/>
+                        </g>
+                    `);
         }
-
-        else if (this.activePerString.get(s).has(f)) {
-          circle.setAttribute("class", "note-chord");
-        }
-
-        else if (this.highlighted.has(key)) {
-          if (this.viewDetail === "chord" && MODE_NAMES.includes(this.viewMode)) {
-            const info = note ? this.getDegreeInfo(note) : null;
-            if (!info) {
-              circle.setAttribute("class", "note-degree-greyed");
-            } else {
-              const { degree, quality } = info;
-              if (degree === 1) circle.setAttribute("class", "note-degree-1");
-              else if (degree === 3) {
-                if (quality === "minor") circle.setAttribute("class", "note-degree-3-minor");
-                else circle.setAttribute("class", "note-degree-3-major");
-              }
-              else if (degree === 5) circle.setAttribute("class", "note-degree-5");
-              else circle.setAttribute("class", "note-degree-greyed");
-            }
-          } else {
-            if (normalizeNote(note) === this.currentTonic) {
-              circle.setAttribute("class", "note-tonic");
-            } else {
-              circle.setAttribute("class", "note-scale");
-            }
-          }
-        }
-
-        else {
-          circle.setAttribute("fill", "transparent");
-          circle.setAttribute("stroke", "transparent");
-        }
-
-        circle.addEventListener("click", () => {
-          if (!this.highlighted.has(key)) return;
-
-          const set = this.activePerString.get(s);
-          set.has(f) ? set.delete(f) : set.add(f);
-
-          flashMatchingNotes(this, note);
-          this.emitNoteChange();
-        });
-
-        svg.appendChild(circle);
       }
+    });
+
+    // Optional flash overlay: highlight ALL fret positions whose semitone
+    // matches flashSemi, regardless of whether they are in the current
+    // answerKey. This preserves the original "show every C on the neck"
+    // behavior when a single note is chosen.
+    if (flashSemi >= 0) {
+      STRING_OPEN_SEMITONES.forEach((openSemi, sIdx) => {
+        const y = yForStringIndex(sIdx);
+        for (let f = 0; f <= frets; f++) {
+          const x = f * fretWidth + fretWidth / 2;
+          const sem = (openSemi + f) % 12;
+          if (sem !== flashSemi) continue;
+
+          svgParts.push(`
+                        <circle cx="${x}" cy="${y}" r="${stringHeight * 0.35}"
+                                fill="none" stroke="#0074D9" stroke-width="3"/>
+                    `);
+        }
+      });
     }
 
-    this.shadowRoot.appendChild(svg);
+    svgParts.push(`</svg>`);
+
+    const ctxLabel = this.context
+      ? `<div class="ctx">Key of ${this.context.tonic} – ${this.context.type} degree ${this.context.degree}</div>`
+      : `<div class="ctx">No context</div>`;
+
+    this.shadowRoot.innerHTML = `
+            <style>
+                :host {
+                    display: block;
+                    min-height: 220px;
+                }
+                /* LLM NOTE:
+                   The SVG background is transparent on purpose.
+                   The "fretboard" is defined by strings + frets only.
+                   Fret markers live beneath this region for clear pedagogy. */
+                svg {
+                    background: transparent;
+                }
+                text {
+                    font-family: system-ui, sans-serif;
+                }
+                .ctx {
+                    color: #ddd;
+                    font-family: system-ui, sans-serif;
+                    margin-bottom: 0.5rem;
+                    font-size: 0.9rem;
+                }
+            </style>
+            ${ctxLabel}
+            ${svgParts.join("")}
+        `;
+
+    // LLM NOTE:
+    // Click handling is implemented via event delegation on the shadow root.
+    // When a highlighted note circle is clicked, we dispatch a custom event
+    // "fret-note-click" that bubbles OUT of the component so main.js (or any
+    // controller) can react and, for example, update the note-panel.
+    if (!this._clickHandlerAttached) {
+      this._clickHandlerAttached = true;
+      this.shadowRoot.addEventListener("click", (evt) => {
+        const target = evt.target;
+        if (!target) return;
+
+        // Walk up to the nearest <g> that represents a note dot.
+        const group = target.closest("g[data-note]");
+        if (!group) return;
+
+        // Read the encoded note name; dots themselves remain unlabeled visually.
+        const noteName = group.getAttribute("data-note");
+        if (!noteName) return;
+
+        this.dispatchEvent(
+          new CustomEvent("fret-note-click", {
+            detail: { note: noteName },
+            bubbles: true,
+            composed: true
+          })
+        );
+      });
+    }
   }
 }
 
