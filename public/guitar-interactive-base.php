@@ -9,26 +9,26 @@
     <link rel="shortcut icon" type="image/png" href="favicon.png">
 
     <meta name="description"
-        content="Single Page Application (SPA) browser for developers. Visit: GitHub.com/ajaxstardust/AnnieDeBrowsa">
+        content="Interactive guitar fretboard and piano trainer. Learn modes and triads in any key with tonic-relative degree mapping.">
 
     <!-- Open Graph Meta Tags -->
-    <meta property="og:url" content="https://transformative.click">
+    <meta property="og:url" content="">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Transformative.Click">
+    <meta property="og:title" content="Interactive Guitar Fretboard + Piano Trainer">
     <meta property="og:description"
-        content="Unicode Misc Symbols and Pictographs in Single Page Application (SPA) browser for developers. Visit: GitHub.com/ajaxstardust/AnnieDeBrowsa">
-    <meta property="og:image" content="https://transformative.click/favicon.png">
+        content="Interactive guitar fretboard and piano trainer. Learn modes and triads in any key with tonic-relative degree mapping.">
+    <meta property="og:image" content="https://statecollegeguitarlessons.site/themes/basix-rwguitar/assets/images/logo@2x.png">
     <meta property="og:image:width" content="680">
     <meta property="og:image:height" content="680">
 
     <!-- Twitter Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta property="twitter:domain" content="transformative.click">
-    <meta property="twitter:url" content="https://transformative.click">
-    <meta name="twitter:title" content="Transformative.Click">
+    <meta property="twitter:domain" content="">
+    <meta property="twitter:url" content="">
+    <meta name="twitter:title" content="Interactive Guitar Fretboard + Piano Trainer">
     <meta name="twitter:description"
-        content="Unicode Misc Symbols and Pictographs in Single Page Application (SPA) browser for developers. Visit: GitHub.com/ajaxstardust/AnnieDeBrowsa">
-    <meta name="twitter:image" content="https://transformative.click/favicon.png">
+        content="Interactive guitar fretboard and piano trainer. Learn modes and triads in any key with tonic-relative degree mapping.">
+    <meta name="twitter:image" content="https://statecollegeguitarlessons.site/themes/basix-rwguitar/assets/images/logo@2x.png">
 
     <link rel="stylesheet" href="assets/css/guitarstyle.css" />
 </head>
