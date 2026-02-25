@@ -28,6 +28,7 @@
 
 import { buildModeFromDegree, buildTriadFromDegree, getModeName, getTriadQuality } from "./music-theory.js";
 import { initUIController } from "./ui-controller.js";
+import { playNote } from "./sound.js";
 import "./guitar-fretboard.js";
 import "./guitar-fret-markers.js";
 import "./piano-keyboard.js";
@@ -84,8 +85,83 @@ function updateAllComponents({ type, degree, tonic }) {
 //
 // DO NOT call updateAllComponents() manually here.
 //
-document.addEventListener("DOMContentLoaded", () => {
-    initUIController(updateAllComponents);
+// LLM NOTE (BOOTSTRAP TIMING):
+// Module scripts can execute after DOMContentLoaded has already fired.
+// If we only listen for DOMContentLoaded, the listener may never run and
+// fret-note-click / piano-key-click handlers (and thus flash-on-click) will
+// never be attached. Always run init: wait for DOMContentLoaded only when
+// document.readyState === "loading"; otherwise run init immediately.
+// DO NOT remove the readyState check or flash-on-click will regress.
+//
+// LLM NOTE (SEQUENCER): Play button runs through the current mode/chord in order
+// (like note-cards / sequencing exercise). Uses #playSequence. Stopped when
+// user clicks Stop or when key/mode/degree changes (onChange wrapper).
+const SEQUENCE_DELAY_MS = 700;
+
+function runInit() {
+    let sequencerTimeoutIds = [];
+    let isSequencerPlaying = false;
+
+    function stopSequencer() {
+        sequencerTimeoutIds.forEach((id) => clearTimeout(id));
+        sequencerTimeoutIds = [];
+        isSequencerPlaying = false;
+        const btn = document.getElementById("playSequence");
+        if (btn) btn.textContent = "Play";
+    }
+
+    // LLM NOTE: When user changes type/degree/tonic, stop the sequence so display stays in sync.
+    initUIController((state) => {
+        stopSequencer();
+        updateAllComponents(state);
+    });
+
+    // LLM NOTE: Play / Stop button. Reads current key from DOM and runs through notes in order.
+    const playBtn = document.getElementById("playSequence");
+    if (playBtn) {
+        playBtn.addEventListener("click", () => {
+            if (isSequencerPlaying) {
+                stopSequencer();
+                return;
+            }
+            const typeSelect = document.querySelector("#chordmode");
+            const degreeSelect = document.querySelector("#degree");
+            const tonicSelect = document.querySelector("#tonic");
+            if (!typeSelect || !degreeSelect || !tonicSelect) return;
+            const type = typeSelect.value;
+            const degree = Number(degreeSelect.value) || 1;
+            const tonic = tonicSelect.value;
+            const answerKey = type === "chord"
+                ? buildTriadFromDegree(degree, tonic)
+                : buildModeFromDegree(degree, tonic);
+            const guitar = document.querySelector("guitar-fretboard");
+            const panel = document.querySelector("note-panel");
+
+            isSequencerPlaying = true;
+            playBtn.textContent = "Stop";
+
+            answerKey.forEach((noteObj, i) => {
+                const id = setTimeout(() => {
+                    const note = noteObj.note;
+                    playNote(note);
+                    if (panel && typeof panel.setActiveNote === "function") {
+                        panel.setActiveNote(note, true);
+                    }
+                    if (guitar && typeof guitar.flashNote === "function") {
+                        guitar.flashNote(note);
+                    }
+                }, i * SEQUENCE_DELAY_MS);
+                sequencerTimeoutIds.push(id);
+            });
+
+            const endId = setTimeout(() => {
+                isSequencerPlaying = false;
+                playBtn.textContent = "Play";
+                sequencerTimeoutIds = [];
+            }, answerKey.length * SEQUENCE_DELAY_MS);
+            sequencerTimeoutIds.push(endId);
+        });
+    }
 
     // LLM NOTE:
     // Student interaction hook:
@@ -95,16 +171,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const guitar = document.querySelector("guitar-fretboard");
     const piano = document.querySelector("piano-keyboard");
 
+    // LLM NOTE: Fretboard clicks pass position (dot stays lit, panel reveals degree).
+    // Piano clicks only flash; no dot stays lit and panel does not reveal (quiz = fretboard).
+    // Sound: play the clicked note (fret or piano) via Web Audio.
     if (guitar) {
         guitar.addEventListener("fret-note-click", (evt) => {
             const note = evt.detail && evt.detail.note;
             if (!note) return;
+            playNote(note);
             const panel = document.querySelector("note-panel");
             if (panel && typeof panel.setActiveNote === "function") {
-                panel.setActiveNote(note);
+                panel.setActiveNote(note, true);
             }
             if (typeof guitar.flashNote === "function") {
-                guitar.flashNote(note);
+                const position =
+                    typeof evt.detail.stringIndex === "number" && typeof evt.detail.fret === "number"
+                        ? { stringIndex: evt.detail.stringIndex, fret: evt.detail.fret }
+                        : undefined;
+                guitar.flashNote(note, position);
             }
         });
     }
@@ -113,13 +197,22 @@ document.addEventListener("DOMContentLoaded", () => {
         piano.addEventListener("piano-key-click", (evt) => {
             const note = evt.detail && evt.detail.note;
             if (!note) return;
+            playNote(note);
             const panel = document.querySelector("note-panel");
             if (panel && typeof panel.setActiveNote === "function") {
-                panel.setActiveNote(note);
+                panel.setActiveNote(note, false);
             }
             if (guitar && typeof guitar.flashNote === "function") {
                 guitar.flashNote(note);
             }
         });
     }
-});
+}
+
+// LLM NOTE: See BOOTSTRAP TIMING comment above. Do not replace with a single
+// document.addEventListener("DOMContentLoaded", runInit) only.
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", runInit);
+} else {
+    runInit();
+}

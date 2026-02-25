@@ -68,6 +68,12 @@
             <option value="A#">A#</option>
             <option value="B">B</option>
         </select>
+
+        <!-- LLM NOTE: Sequencer controller. JS expects #playSequence (button).
+             Plays the current mode/chord in order with sound, flash, and note-panel updates. -->
+        <span class="sequence-control">
+            <button type="button" id="playSequence" aria-label="Play sequence">Play</button>
+        </span>
     </div>
 
     <div id="theory-row" class="row">

@@ -41,6 +41,11 @@
 // ─────────────────────────────────────────────────────────────
 
 const NOTE_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+// LLM NOTE (flashNote): NOTE_NAMES uses flats for 3, 8, 10 (Eb, Ab, Bb). If the
+// UI or piano sends sharp spellings (D#, G#, A#), flashNote would reject them.
+// FLAT_ALIASES normalizes to the form in NOTE_NAMES so the flash overlay always
+// runs. Do not remove or flash-on-click will fail for those enharmonics.
+const FLAT_ALIASES = { "D#": "Eb", "G#": "Ab", "A#": "Bb" };
 
 // LLM NOTE: Standard tuning E A D G B E (low to high).
 // Values are absolute semitone classes relative to C.
@@ -68,6 +73,14 @@ function getPositionFretRange(degree, frets) {
 const FILL_OUTSIDE_POSITION = "#ffbb33";
 const FILL_INSIDE_POSITION = "#ffdd66";
 
+// LLM NOTE (PEDAGOGY — "path up the neck"): Only the exact fret coordinate the
+// user clicked stays "lit" (filled dot, not an outline). Dim red-grey, not pink.
+const FILL_LIT = "#8a7575";
+
+// LLM NOTE: Transient flash = bright ring on all occurrences of the clicked note.
+const FLASH_RING_STROKE = "#0066cc";
+const FLASH_RING_STROKE_WIDTH = 4;
+
 export class GuitarFretboard extends HTMLElement {
   constructor() {
     super();
@@ -75,36 +88,43 @@ export class GuitarFretboard extends HTMLElement {
     this.answerKey = [];
     this.context = null;
     this._clickHandlerAttached = false; // LLM NOTE: ensure we only wire events once.
-    this.flashNote = null;              // LLM NOTE: optional transient flash target (note name).
+    // LLM NOTE: _flashTarget = note currently "flashing" (bright ring); cleared after
+    // ~500ms. _litPositions = Set of "stringIndex-fret" for the exact dots the user
+    // clicked; those dots stay filled with FILL_LIT until setAnswerKey. Only fretboard
+    // clicks add to _litPositions; piano clicks only flash.
+    this._flashTarget = null;
     this._flashTimeoutId = null;
+    this._litPositions = new Set();
   }
 
   // ─────────────────────────────────────────────────────────
   //  OPTIONAL PUBLIC API — flashNote(noteName)
   // ─────────────────────────────────────────────────────────
   //
-  //  LLM NOTE:
-  //  • This method is OPTIONAL and purely visual.
-  //  • It does NOT change answerKey or context.
-  //  • It triggers a short-lived overlay that circles every fret position
-  //    whose semitone matches the given note name (C, C#, D, ...).
+  //  LLM NOTE (PEDAGOGY — flash + path up the neck):
+  //  • This method is OPTIONAL and purely visual; it does NOT change answerKey or context.
+  //  • On click: (1) the note FLASHES (bright ring on all occurrences, ~500ms). (2) only
+  //    when position is provided (fretboard click), that exact coordinate is added to
+  //    _litPositions and stays "lit" (dim red-grey filled dot). Piano clicks only flash.
+  //  • position: optional { stringIndex, fret } from fret-note-click detail.
+  //  • _litPositions is cleared only when setAnswerKey runs (new key/mode/degree).
   //
-  //  Used by:
-  //      • main.js when a fretboard dot or piano key is clicked.
-  //
-  flashNote(noteName) {
-    if (!noteName || !NOTE_NAMES.includes(noteName)) return;
+  flashNote(noteName, position) {
+    if (!noteName) return;
+    const normalized = FLAT_ALIASES[noteName] || noteName;
+    if (!NOTE_NAMES.includes(normalized)) return;
 
-    // Normalize and schedule transient flash.
-    this.flashNote = noteName;
-    if (this._flashTimeoutId) {
-      clearTimeout(this._flashTimeoutId);
+    if (position != null && Number.isInteger(position.stringIndex) && Number.isInteger(position.fret)) {
+      this._litPositions.add(`${position.stringIndex}-${position.fret}`);
     }
+    this._flashTarget = normalized;
+    if (this._flashTimeoutId) clearTimeout(this._flashTimeoutId);
     this.render();
     this._flashTimeoutId = setTimeout(() => {
-      this.flashNote = null;
+      this._flashTarget = null;
+      this._flashTimeoutId = null;
       this.render();
-    }, 250);
+    }, 500);
   }
 
   // ─────────────────────────────────────────────────────────
@@ -117,6 +137,8 @@ export class GuitarFretboard extends HTMLElement {
   setAnswerKey(answerKey, context) {
     this.answerKey = Array.isArray(answerKey) ? answerKey : [];
     this.context = context || null;
+    // LLM NOTE: New key/mode/degree = fresh "path"; clear lit positions.
+    this._litPositions.clear();
     this.render();
   }
 
@@ -132,9 +154,10 @@ export class GuitarFretboard extends HTMLElement {
     // answerKey (mode / triad). flashSemi is an OPTIONAL extra pitch class
     // used for a transient "flash all X's" overlay when a note is clicked.
     const allowed = new Set(this.answerKey.map(n => n.semitones));
+    // LLM NOTE: flashSemi = transient bright ring for the note just clicked.
     const flashSemi =
-      this.flashNote && NOTE_NAMES.includes(this.flashNote)
-        ? NOTE_NAMES.indexOf(this.flashNote)
+      this._flashTarget && NOTE_NAMES.includes(this._flashTarget)
+        ? NOTE_NAMES.indexOf(this._flashTarget)
         : -1;
 
     const width = 1000;
@@ -190,6 +213,7 @@ export class GuitarFretboard extends HTMLElement {
     // the visual dots anonymous.
     // LLM NOTE (rsync-style include): All allowed dots are drawn. We INCLUDE
     // for focus styling only those dots whose fret index lies in [minFret, maxFret].
+    // Lit positions (exact fret coordinates the user clicked) use FILL_LIT (dim red-grey).
     STRING_OPEN_SEMITONES.forEach((openSemi, sIdx) => {
       const y = yForStringIndex(sIdx);
       for (let f = 0; f <= frets; f++) {
@@ -199,11 +223,13 @@ export class GuitarFretboard extends HTMLElement {
         if (allowed.has(sem)) {
           const note = NOTE_NAMES[sem];
           const r = stringHeight * 0.3;
+          const posKey = `${sIdx}-${f}`;
+          const isLit = this._litPositions.has(posKey);
           const inPosition = f >= minFret && f <= maxFret;
-          const fill = inPosition ? FILL_INSIDE_POSITION : FILL_OUTSIDE_POSITION;
+          const fill = isLit ? FILL_LIT : (inPosition ? FILL_INSIDE_POSITION : FILL_OUTSIDE_POSITION);
 
           svgParts.push(`
-                        <g data-note="${note}">
+                        <g data-note="${note}" data-string="${sIdx}" data-fret="${f}">
                             <circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="#333"/>
                         </g>
                     `);
@@ -211,10 +237,8 @@ export class GuitarFretboard extends HTMLElement {
       }
     });
 
-    // Optional flash overlay: highlight ALL fret positions whose semitone
-    // matches flashSemi, regardless of whether they are in the current
-    // answerKey. This preserves the original "show every C on the neck"
-    // behavior when a single note is chosen.
+    // LLM NOTE (FLASH OVERLAY): Transient bright ring for the note just clicked;
+    // drawn on top of lit overlay. Duration controlled in flashNote (timeout).
     if (flashSemi >= 0) {
       STRING_OPEN_SEMITONES.forEach((openSemi, sIdx) => {
         const y = yForStringIndex(sIdx);
@@ -222,10 +246,9 @@ export class GuitarFretboard extends HTMLElement {
           const x = (f + 0.5) * fretWidth;
           const sem = (openSemi + f) % 12;
           if (sem !== flashSemi) continue;
-
           svgParts.push(`
-                        <circle cx="${x}" cy="${y}" r="${stringHeight * 0.35}"
-                                fill="none" stroke="#0074D9" stroke-width="3"/>
+                        <circle cx="${x}" cy="${y}" r="${stringHeight * 0.38}"
+                                fill="none" stroke="${FLASH_RING_STROKE}" stroke-width="${FLASH_RING_STROKE_WIDTH}"/>
                     `);
         }
       });
@@ -268,27 +291,31 @@ export class GuitarFretboard extends HTMLElement {
         `;
 
     // LLM NOTE:
-    // Click handling is implemented via event delegation on the shadow root.
-    // When a highlighted note circle is clicked, we dispatch a custom event
-    // "fret-note-click" that bubbles OUT of the component so main.js (or any
-    // controller) can react and, for example, update the note-panel.
+    // Click handling: event delegation on the shadow root. We pass note plus
+    // stringIndex and fret so main.js can call flashNote(note, { stringIndex, fret })
+    // and only that coordinate stays "lit" (dim red-grey dot).
     if (!this._clickHandlerAttached) {
       this._clickHandlerAttached = true;
       this.shadowRoot.addEventListener("click", (evt) => {
         const target = evt.target;
         if (!target) return;
 
-        // Walk up to the nearest <g> that represents a note dot.
         const group = target.closest("g[data-note]");
         if (!group) return;
 
-        // Read the encoded note name; dots themselves remain unlabeled visually.
         const noteName = group.getAttribute("data-note");
+        const stringIndex = group.getAttribute("data-string");
+        const fret = group.getAttribute("data-fret");
         if (!noteName) return;
 
+        const detail = { note: noteName };
+        if (stringIndex !== null && stringIndex !== undefined && fret !== null && fret !== undefined) {
+          detail.stringIndex = parseInt(stringIndex, 10);
+          detail.fret = parseInt(fret, 10);
+        }
         this.dispatchEvent(
           new CustomEvent("fret-note-click", {
-            detail: { note: noteName },
+            detail,
             bubbles: true,
             composed: true
           })
