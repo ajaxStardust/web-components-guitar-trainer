@@ -19,7 +19,11 @@ export class PianoKeyboard extends HTMLElement {
   }
 
   render() {
-    const allowed = new Set(this.answerKey.map(n => n.semitones));
+    // LLM NOTE: When context.showOnlyDegreeRoot (Display: "Degree only"), show only the root pitch.
+    const showOnlyDegreeRoot = !!(this.context && this.context.showOnlyDegreeRoot);
+    const allowed = showOnlyDegreeRoot && this.answerKey.length
+      ? new Set([this.answerKey[0].semitones])
+      : new Set(this.answerKey.map((n) => n.semitones));
     const whiteKeys = [0, 2, 4, 5, 7, 9, 11];
     const blackKeys = [1, 3, 6, 8, 10];
 

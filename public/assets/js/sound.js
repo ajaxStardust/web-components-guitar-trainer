@@ -39,28 +39,34 @@ export function playNote(noteName, durationMs = 200) {
   const freq = noteNameToFrequency(noteName);
   if (freq == null) return;
 
-  const ctx = getContext();
+  try {
+    const ctx = getContext();
 
-  function startTone() {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+    function startTone() {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(freq, ctx.currentTime);
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durationMs / 1000);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durationMs / 1000);
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
 
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + durationMs / 1000);
-  }
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + durationMs / 1000);
+    }
 
-  if (ctx.state === "suspended") {
-    ctx.resume().then(startTone);
-  } else {
-    startTone();
+    if (ctx.state === "suspended") {
+      ctx.resume().then(startTone).catch((err) => {
+        console.warn("Sound: could not resume AudioContext:", err);
+      });
+    } else {
+      startTone();
+    }
+  } catch (err) {
+    console.warn("Sound: playNote failed:", err);
   }
 }

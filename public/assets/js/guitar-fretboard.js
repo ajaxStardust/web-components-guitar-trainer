@@ -150,10 +150,12 @@ export class GuitarFretboard extends HTMLElement {
     const frets = Number.isFinite(fretsAttr) && fretsAttr > 0 ? fretsAttr : DEFAULT_FRETS;
 
     // LLM NOTE:
-    // allowed = set of absolute semitone classes to highlight for the current
-    // answerKey (mode / triad). flashSemi is an OPTIONAL extra pitch class
-    // used for a transient "flash all X's" overlay when a note is clicked.
-    const allowed = new Set(this.answerKey.map(n => n.semitones));
+    // allowed = semitone classes to show. When context.showOnlyDegreeRoot (Display:
+    // "Degree only"), only the root of the current mode is shown (rsync-include style).
+    const showOnlyDegreeRoot = !!(this.context && this.context.showOnlyDegreeRoot);
+    const allowed = showOnlyDegreeRoot && this.answerKey.length
+      ? new Set([this.answerKey[0].semitones])
+      : new Set(this.answerKey.map((n) => n.semitones));
     // LLM NOTE: flashSemi = transient bright ring for the note just clicked.
     const flashSemi =
       this._flashTarget && NOTE_NAMES.includes(this._flashTarget)
@@ -186,6 +188,19 @@ export class GuitarFretboard extends HTMLElement {
     const svgParts = [];
     svgParts.push(`<svg viewBox="0 0 ${width} ${height}" width="100%" height="100%">`);
 
+    // LLM NOTE (NUT COSMETICS): Headstock + nut like a real guitar (e.g. Martin). The area
+    // where the fretboard meets the nut is a distinct headstock zone and a nut strip,
+    // not a dot color change. Dots stay the same; the nut/headstock is visually separate.
+    const nutX = fretWidth; // nut is the first segment boundary
+    const headstockWidth = nutX;
+    const nutStripWidth = 8;
+    svgParts.push(
+      `<rect x="0" y="${yMapleTop}" width="${headstockWidth}" height="${yMapleBottom - yMapleTop}" fill="#6b5344" stroke="#5a4a3a" stroke-width="1"/>`
+    );
+    svgParts.push(
+      `<rect x="${nutX - nutStripWidth / 2}" y="${yMapleTop}" width="${nutStripWidth}" height="${yMapleBottom - yMapleTop}" fill="#e8e0d5" stroke="#c9bfb5" stroke-width="1"/>`
+    );
+
     // Frets: nut at first segment boundary (one fret over), then fret 1..N.
     // Frets do not extend beyond the maple (string band); they stay between top and bottom string.
     for (let f = 0; f <= frets; f++) {
@@ -211,9 +226,10 @@ export class GuitarFretboard extends HTMLElement {
     // discover note identities by cross‑referencing the piano + table. We
     // still encode the note name as data-note for click handling, but keep
     // the visual dots anonymous.
-    // LLM NOTE (rsync-style include): All allowed dots are drawn. We INCLUDE
-    // for focus styling only those dots whose fret index lies in [minFret, maxFret].
-    // Lit positions (exact fret coordinates the user clicked) use FILL_LIT (dim red-grey).
+    // LLM NOTE (revealOnClick): When context.revealOnClick is true, dots are hidden until
+    // the user clicks that fret; we still draw transparent clickable circles so they can select.
+    const revealOnClick = !!(this.context && this.context.revealOnClick);
+
     STRING_OPEN_SEMITONES.forEach((openSemi, sIdx) => {
       const y = yForStringIndex(sIdx);
       for (let f = 0; f <= frets; f++) {
@@ -226,19 +242,22 @@ export class GuitarFretboard extends HTMLElement {
           const posKey = `${sIdx}-${f}`;
           const isLit = this._litPositions.has(posKey);
           const inPosition = f >= minFret && f <= maxFret;
-          const fill = isLit ? FILL_LIT : (inPosition ? FILL_INSIDE_POSITION : FILL_OUTSIDE_POSITION);
+          const visible = !revealOnClick || isLit;
+          const fill = visible
+            ? (isLit ? FILL_LIT : (inPosition ? FILL_INSIDE_POSITION : FILL_OUTSIDE_POSITION))
+            : "transparent";
+          const stroke = visible ? "#333" : "transparent";
 
           svgParts.push(`
                         <g data-note="${note}" data-string="${sIdx}" data-fret="${f}">
-                            <circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="#333"/>
+                            <circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${stroke}"/>
                         </g>
                     `);
         }
       }
     });
 
-    // LLM NOTE (FLASH OVERLAY): Transient bright ring for the note just clicked;
-    // drawn on top of lit overlay. Duration controlled in flashNote (timeout).
+    // LLM NOTE (FLASH OVERLAY): Transient bright ring for the note just clicked.
     if (flashSemi >= 0) {
       STRING_OPEN_SEMITONES.forEach((openSemi, sIdx) => {
         const y = yForStringIndex(sIdx);

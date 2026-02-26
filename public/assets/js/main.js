@@ -26,7 +26,7 @@
 //
 // ─────────────────────────────────────────────────────────────
 
-import { buildModeFromDegree, buildTriadFromDegree, getModeName, getTriadQuality } from "./music-theory.js";
+import { buildModeFromDegree, buildTriadFromDegree, buildPentatonicFromDegree, getModeName, getTriadQuality } from "./music-theory.js";
 import { initUIController } from "./ui-controller.js";
 import { playNote } from "./sound.js";
 import "./guitar-fretboard.js";
@@ -43,21 +43,33 @@ function updateAllComponents({ type, degree, tonic }) {
 
     let answerKey;
     // LLM NOTE:
-    // Type determines SHAPE of output (mode = 7 notes, chord = 3 notes).
+    // Type determines SHAPE: mode = 7, chord = 3, pentatonic = 5 (major pentatonic from tonic).
     if (type === "chord") {
         answerKey = buildTriadFromDegree(deg, tonic);
+    } else if (type === "pentatonic") {
+        answerKey = buildPentatonicFromDegree(deg, tonic);
     } else {
         answerKey = buildModeFromDegree(deg, tonic);
     }
 
-    // Triad on this degree (for mode we still have a chord quality on the degree).
     const triadOnDegree = buildTriadFromDegree(deg, tonic);
     const quality = getTriadQuality(triadOnDegree);
 
     // LLM NOTE:
     // This context object is passed to ALL components.
-    // modeName for labels; quality derived from intervals (Major/Minor/Diminished).
-    const ctx = { type, degree: deg, tonic, modeName: getModeName(deg), quality };
+    // revealOnClick / showOnlyDegreeRoot: from #displayMode (see LLM note in HTML).
+    const displayModeEl = document.querySelector("#displayMode");
+    const displayMode = displayModeEl ? displayModeEl.value : "show";
+    const modeName = getModeName(deg);
+    const ctx = {
+        type,
+        degree: deg,
+        tonic,
+        modeName,
+        quality,
+        revealOnClick: displayMode === "reveal",
+        showOnlyDegreeRoot: displayMode === "degreeOnly"
+    };
 
     // LLM NOTE:
     // These custom elements MUST exist in the DOM.
@@ -116,6 +128,30 @@ function runInit() {
         updateAllComponents(state);
     });
 
+    // LLM NOTE: Display mode (Show scale / Reveal on click) is read in updateAllComponents;
+    // when it changes we must re-run so the fretboard gets context.revealOnClick.
+    const displayModeEl = document.getElementById("displayMode");
+    if (displayModeEl) {
+        displayModeEl.addEventListener("change", () => {
+            const typeSelect = document.querySelector("#chordmode");
+            const degreeSelect = document.querySelector("#degree");
+            const tonicSelect = document.querySelector("#tonic");
+            if (typeSelect && degreeSelect && tonicSelect) {
+                updateAllComponents({
+                    type: typeSelect.value,
+                    degree: degreeSelect.value,
+                    tonic: tonicSelect.value
+                });
+            }
+        });
+    }
+
+    // LLM NOTE: Test sound button – plays a single note so you can verify audio works (e.g. click once, hear A).
+    const testSoundBtn = document.getElementById("testSound");
+    if (testSoundBtn) {
+        testSoundBtn.addEventListener("click", () => playNote("A"));
+    }
+
     // LLM NOTE: Play / Stop button. Reads current key from DOM and runs through notes in order.
     const playBtn = document.getElementById("playSequence");
     if (playBtn) {
@@ -133,7 +169,9 @@ function runInit() {
             const tonic = tonicSelect.value;
             const answerKey = type === "chord"
                 ? buildTriadFromDegree(degree, tonic)
-                : buildModeFromDegree(degree, tonic);
+                : type === "pentatonic"
+                    ? buildPentatonicFromDegree(degree, tonic)
+                    : buildModeFromDegree(degree, tonic);
             const guitar = document.querySelector("guitar-fretboard");
             const panel = document.querySelector("note-panel");
 

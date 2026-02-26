@@ -40,10 +40,21 @@
     <!-- TYPE SELECTOR (mode vs chord)
          JS expects: #chordmode
     -->
+    <!-- TYPE: Mode (7) / Chord (3) / Pentatonic (5). JS expects #chordmode. -->
     <label>Type:</label>
     <select id="chordmode">
         <option value="mode">Mode</option>
         <option value="chord">Chord</option>
+        <option value="pentatonic">Pentatonic</option>
+    </select>
+
+    <!-- DISPLAY / DIFFICULTY: JS expects #displayMode.
+         "show" = full scale; "reveal" = dots after click; "degreeOnly" = only current degree pitch. -->
+    <label>Display:</label>
+    <select id="displayMode" aria-label="Display mode">
+        <option value="show">Show scale</option>
+        <option value="degreeOnly">Degree only</option>
+        <option value="reveal">Reveal on click</option>
     </select>
 
     <!-- DEGREE / MODE SELECTOR
@@ -74,6 +85,8 @@
         <span class="sequence-control">
             <button type="button" id="playSequence" aria-label="Play sequence">Play</button>
         </span>
+        <!-- LLM NOTE: JS expects #testSound. One-click test for audio (plays A). Use to verify sound works. -->
+        <button type="button" id="testSound" aria-label="Test sound">Test sound</button>
     </div>
 
     <div id="theory-row" class="row">
