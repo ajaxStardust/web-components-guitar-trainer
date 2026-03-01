@@ -29,6 +29,16 @@ function getContext() {
 }
 
 /**
+ * Ensures the AudioContext is running (resumes if suspended).
+ * Call before starting the sequencer so the first note is not dropped.
+ */
+export function ensureAudioReady() {
+  const ctx = getContext();
+  if (ctx.state === "suspended") return ctx.resume();
+  return Promise.resolve();
+}
+
+/**
  * Play a short tone for the given note name (e.g. "G", "Eb").
  * Called from main.js on fret-note-click or piano-key-click.
  * durationMs: length of the tone in ms (default 200).

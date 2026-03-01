@@ -121,6 +121,20 @@ select {
     flex-wrap: wrap;
 }
 
+/* Fretboard + note panel row: ~66% / ~33% split */
+#fretboard-and-panel {
+    flex-wrap: nowrap;
+    width: 100%;
+}
+#fretboard-and-panel #guitarboard {
+    flex: 2;
+    min-width: 0;
+}
+#fretboard-and-panel note-panel {
+    flex: 1;
+    min-width: 0;
+}
+
 div#guitarboard {
     background-color: #f2e7d5;
     /* maple theme */
@@ -128,8 +142,9 @@ div#guitarboard {
     border-radius: 8px;
     border: 2px solid #c4ad8a;
     display: flex;
-    gap: 24px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 8px;
+    flex-wrap: nowrap;
 }
 
 
@@ -149,7 +164,6 @@ guitar-fret-markers {
     display: block;
     max-width: 100%;
     width: 100%;
-    margin-top: 4px;
 }
 
 note-panel {
@@ -161,6 +175,15 @@ note-panel {
     background-color: #ffffff;
     border: 1px solid #bbb;
     color: #222;
+}
+
+#chord-diagram-row {
+    justify-content: center;
+    margin-top: 8px;
+}
+
+chord-diagram {
+    display: block;
 }
 
 

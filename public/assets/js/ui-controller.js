@@ -37,10 +37,16 @@ export function initUIController(onChange) {
     const typeSelect = document.querySelector("#chordmode");
     const degreeSelect = document.querySelector("#degree");
     const tonicSelect = document.querySelector("#tonic");
+    const chordFormWrap = document.querySelector("#chordFormWrap");
+    const chordFormSelect = document.querySelector("#chordForm");
 
     if (!typeSelect || !degreeSelect || !tonicSelect) {
         console.error("UI Controller ERROR: One or more required selectors (#chordmode, #degree, #tonic) were NOT found in the DOM.");
         return;
+    }
+
+    function updateChordFormVisibility() {
+        if (chordFormWrap) chordFormWrap.style.display = typeSelect.value === "chord" ? "" : "none";
     }
 
     // ─────────────────────────────────────────────────────────
@@ -62,7 +68,8 @@ export function initUIController(onChange) {
         onChange({
             type: typeSelect.value,
             degree: degreeSelect.value,
-            tonic: tonicSelect.value
+            tonic: tonicSelect.value,
+            chordForm: chordFormSelect ? chordFormSelect.value : "triad"
         });
     }
 
@@ -75,18 +82,21 @@ export function initUIController(onChange) {
     populateDegree();
     degreeSelect.value = "1";
     tonicSelect.value = "G";
+    updateChordFormVisibility();
 
     // ─────────────────────────────────────────────────────────
     //  Event listeners
     // ─────────────────────────────────────────────────────────
     typeSelect.addEventListener("change", () => {
-        populateDegree();       // refresh degree list
+        populateDegree();
         degreeSelect.value = "1";
+        updateChordFormVisibility();
         emit();
     });
 
     degreeSelect.addEventListener("change", emit);
     tonicSelect.addEventListener("change", emit);
+    if (chordFormSelect) chordFormSelect.addEventListener("change", emit);
 
     // Initial render
     emit();

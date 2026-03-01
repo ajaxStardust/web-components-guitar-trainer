@@ -77,24 +77,6 @@ export function getTriadQuality(notes) {
   return "";
 }
 
-// LLM NOTE: Seventh chord quality from degrees 1,3,5,7 of the rotated mode.
-export function getSeventhQuality(notes) {
-  if (!Array.isArray(notes) || notes.length < 4) return "";
-  const root = notes[0].semitones;
-  const third = notes[1].semitones;
-  const fifth = notes[2].semitones;
-  const seventh = notes[3].semitones;
-  const thirdInterval = (third - root + 12) % 12;
-  const fifthInterval = (fifth - root + 12) % 12;
-  const seventhInterval = (seventh - root + 12) % 12;
-  if (thirdInterval === 3 && fifthInterval === 6 && seventhInterval === 9) return "Diminished 7";
-  if (thirdInterval === 3 && fifthInterval === 6 && seventhInterval === 10) return "Half-diminished 7";
-  if (thirdInterval === 4 && fifthInterval === 7 && seventhInterval === 11) return "Major 7";
-  if (thirdInterval === 3 && fifthInterval === 7 && seventhInterval === 10) return "Minor 7";
-  if (thirdInterval === 4 && fifthInterval === 7 && seventhInterval === 10) return "Dominant 7";
-  return "";
-}
-
 // LLM NOTE: This mapping MUST remain stable.
 // DO NOT add enharmonic logic. DO NOT remove entries.
 const TONIC_TO_SEMITONE = {
@@ -157,15 +139,6 @@ export function buildModeFromDegree(degree, tonic) {
 export function buildTriadFromDegree(degree, tonic) {
   const mode = buildModeFromDegree(degree, tonic);
   const wanted = new Set([1, 3, 5]);
-  return mode.filter(n => wanted.has(n.degree));
-}
-
-// ─────────────────────────────────────────────────────────────
-//  SEVENTH CHORD — degrees 1, 3, 5, 7 of the rotated mode.
-// ─────────────────────────────────────────────────────────────
-export function buildSeventhFromDegree(degree, tonic) {
-  const mode = buildModeFromDegree(degree, tonic);
-  const wanted = new Set([1, 3, 5, 7]);
   return mode.filter(n => wanted.has(n.degree));
 }
 

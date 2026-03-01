@@ -6,8 +6,6 @@ const NOTE_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", 
 const FLAT_ALIASES = { "D#": "Eb", "G#": "Ab", "A#": "Bb" };
 const FLASH_STROKE = "#0066cc";
 const FLASH_STROKE_WIDTH = 3;
-const FLASH_FILL_WHITE = "#7ec8ff";   /* light blue when white key flashes */
-const FLASH_FILL_BLACK = "#4a90d9";   /* blue when black key flashes */
 
 export class PianoKeyboard extends HTMLElement {
   constructor() {
@@ -61,7 +59,7 @@ export class PianoKeyboard extends HTMLElement {
       const isActive = allowed.has(semi);
       const note = NOTE_NAMES[semi];
       const isFlashing = this._flashTarget === note;
-      const fill = isFlashing ? FLASH_FILL_WHITE : (isActive ? "#ffbb33" : "#fff");
+      const fill = isActive ? "#ffbb33" : "#fff";
       const stroke = isFlashing ? FLASH_STROKE : "#000";
       const strokeWidth = isFlashing ? FLASH_STROKE_WIDTH : 1;
       svgParts.push(`
@@ -83,7 +81,7 @@ export class PianoKeyboard extends HTMLElement {
       const isActive = allowed.has(semi);
       const note = NOTE_NAMES[semi];
       const isFlashing = this._flashTarget === note;
-      const fill = isFlashing ? FLASH_FILL_BLACK : (isActive ? "#ffbb33" : "#000");
+      const fill = isActive ? "#ffbb33" : "#000";
       const stroke = isFlashing ? FLASH_STROKE : "#333";
       const strokeWidth = isFlashing ? FLASH_STROKE_WIDTH : 1;
       svgParts.push(`
@@ -91,7 +89,7 @@ export class PianoKeyboard extends HTMLElement {
                     <rect x="${x}" y="0" width="${whiteWidth * 0.6}" height="${height * 0.6}"
                           fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"/>
                     <text x="${x + whiteWidth * 0.3}" y="${height * 0.4}" text-anchor="middle"
-                          font-size="10" fill="${isFlashing || isActive ? "#000" : "#fff"}">${note}</text>
+                          font-size="10" fill="${isActive ? "#000" : "#fff"}">${note}</text>
                 </g>
             `);
     });

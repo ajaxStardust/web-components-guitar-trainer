@@ -2,7 +2,9 @@
 
 A learning tool for guitar students: displays the tones of a given mode or chord with interactive visual cues.
 
-**Preview live:** [https://transformative.click/public/guitar-interactive-base.php](https://transformative.click/public/guitar-interactive-base.php)
+**Live demo:** [https://training.statecollegeguitarlessons.site](https://training.statecollegeguitarlessons.site)
+
+**New here?** Follow the step-by-step walkthrough: [Guitar Modes, Chords, and Pentatonic Scales Trainer](https://app.tango.us/app/workflow/Guitar-Modes--Chords--and-Pentatonic-Scales-Trainer-3780d3c0c45445aea094b5f028075237) — use this guide to get the most out of the app.
 
 ## Why it’s built this way: relative pitch & derivation
 

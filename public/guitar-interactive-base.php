@@ -1,69 +1,47 @@
+<!-- guitar-interactive-base.php -->
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Interactive Guitar Fretboard + Piano Trainer</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="shortcut icon" type="image/png" href="favicon.png">
-
-    <meta name="description"
-        content="Interactive guitar fretboard and piano trainer. Learn modes and triads in any key with tonic-relative degree mapping.">
-
-    <!-- Open Graph Meta Tags -->
-    <meta property="og:url" content="">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Interactive Guitar Fretboard + Piano Trainer">
-    <meta property="og:description"
-        content="Interactive guitar fretboard and piano trainer. Learn modes and triads in any key with tonic-relative degree mapping.">
-    <meta property="og:image" content="https://statecollegeguitarlessons.site/themes/basix-rwguitar/assets/images/logo@2x.png">
-    <meta property="og:image:width" content="680">
-    <meta property="og:image:height" content="680">
-
-    <!-- Twitter Meta Tags -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta property="twitter:domain" content="">
-    <meta property="twitter:url" content="">
-    <meta name="twitter:title" content="Interactive Guitar Fretboard + Piano Trainer">
-    <meta name="twitter:description"
-        content="Interactive guitar fretboard and piano trainer. Learn modes and triads in any key with tonic-relative degree mapping.">
-    <meta name="twitter:image" content="https://statecollegeguitarlessons.site/themes/basix-rwguitar/assets/images/logo@2x.png">
-
     <link rel="stylesheet" href="assets/css/guitarstyle.css" />
 </head>
-
 <body>
+
+    <div style="text-align: center; margin-bottom: 0.5rem;">
+        <a href="https://statecollegeguitarlessons.site/"><img src="https://statecollegeguitarlessons.site/themes/basix-rwguitar/assets/images/logo@2x.png" alt="State College Guitar Lessons" style="max-width: 315px; height: auto; display: inline-block;" /></a>
+    </div>
     <h2>Interactive Guitar Fretboard + Piano Trainer</h2>
 
     <div id="controls">
-    <!-- TYPE SELECTOR (mode vs chord)
-         JS expects: #chordmode
-    -->
-    <!-- TYPE: Mode (7) / Chord (3) / Pentatonic (5). JS expects #chordmode. -->
-    <label>Type:</label>
-    <select id="chordmode">
-        <option value="mode">Mode</option>
-        <option value="chord">Chord</option>
-        <option value="pentatonic">Pentatonic</option>
-    </select>
+        <label>Type:</label>
+        <select id="chordmode">
+            <option value="mode">Mode</option>
+            <option value="chord">Chord</option>
+            <option value="pentatonic">Pentatonic</option>
+        </select>
 
-    <!-- DISPLAY / DIFFICULTY: JS expects #displayMode.
-         "show" = full scale; "reveal" = dots after click; "degreeOnly" = only current degree pitch. -->
-    <label>Display:</label>
-    <select id="displayMode" aria-label="Display mode">
-        <option value="show">Show scale</option>
-        <option value="degreeOnly">Degree only</option>
-        <option value="reveal">Reveal on click</option>
-    </select>
+        <span id="chordFormWrap" style="display: none;">
+            <label>Chord form:</label>
+            <select id="chordForm" aria-label="Chord form">
+                <option value="triad">Triad</option>
+                <option value="7th">7th</option>
+            </select>
+        </span>
 
-    <!-- DEGREE / MODE SELECTOR
-         JS expects: #degree
-         This dropdown is dynamically populated by ui-controller.js.
-    -->
-    <label>Degree:</label>
-    <select id="degree"></select>
-    
+        <label>Display:</label>
+        <select id="displayMode" aria-label="Display mode">
+            <option value="show">Show scale</option>
+            <option value="degreeOnly">Degree only</option>
+            <option value="reveal">Reveal on click</option>
+        </select>
+
+        <label>Degree:</label>
+        <select id="degree"></select>
+
         <label for="tonic"><strong>Tonic:</strong></label>
         <select id="tonic" aria-label="Select tonic">
             <option value="C">C</option>
@@ -80,30 +58,28 @@
             <option value="B">B</option>
         </select>
 
-        <!-- LLM NOTE: Sequencer controller. JS expects #playSequence (button).
-             Plays the current mode/chord in order with sound, flash, and note-panel updates. -->
         <span class="sequence-control">
             <button type="button" id="playSequence" aria-label="Play sequence">Play</button>
         </span>
-        <!-- LLM NOTE: JS expects #testSound. One-click test for audio (plays A). Use to verify sound works. -->
         <button type="button" id="testSound" aria-label="Test sound">Test sound</button>
+    </div>
+
+    <div class="row" id="fretboard-and-panel">
+        <div id="guitarboard" class="row">
+            <guitar-fretboard frets="15"></guitar-fretboard>
+            <guitar-fret-markers frets="15"></guitar-fret-markers>
+        </div>
+        <note-panel></note-panel>
+    </div>
+
+    <div id="chord-diagram-row" class="row">
+        <chord-diagram></chord-diagram>
     </div>
 
     <div id="theory-row" class="row">
         <piano-keyboard></piano-keyboard>
-        <note-panel></note-panel>
     </div>
 
-    <div id="guitarboard" class="row">
-        <guitar-fretboard frets="15"></guitar-fretboard>
-    </div>
-
-    <div id="fretmarkers" class="row">
-        <guitar-fret-markers frets="15"></guitar-fret-markers>
-    </div>
-
-    <!-- Load JavaScript Modules -->
     <script type="module" src="assets/js/main.js"></script>
 </body>
-
 </html>
