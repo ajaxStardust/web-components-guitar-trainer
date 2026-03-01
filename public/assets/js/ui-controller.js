@@ -61,6 +61,18 @@ export function initUIController(onChange) {
             opt.textContent = `Degree ${d} – ${getModeName(d)}`;
             degreeSelect.appendChild(opt);
         }
+        degreeSelect.value = "1";
+        const isPentatonic = typeSelect.value === "pentatonic";
+        degreeSelect.disabled = isPentatonic;
+        if (isPentatonic) degreeSelect.value = "1";
+        const hint = document.getElementById("pentatonicHint");
+        if (hint) hint.style.display = isPentatonic ? "" : "none";
+    }
+
+    function updateDegreeSelectAvailability() {
+        const isPentatonic = typeSelect.value === "pentatonic";
+        degreeSelect.disabled = isPentatonic;
+        if (isPentatonic) degreeSelect.value = "1";
     }
 
     // Emit current UI state to main.js
@@ -91,6 +103,7 @@ export function initUIController(onChange) {
         populateDegree();
         degreeSelect.value = "1";
         updateChordFormVisibility();
+        updateDegreeSelectAvailability();
         emit();
     });
 

@@ -2,6 +2,8 @@
 
 A learning tool for guitar students: displays the tones of a given mode or chord with interactive visual cues.
 
+**Public links:** Use **training.statecollegeguitarlessons.site** (trainer) and **statecollegeguitarlessons.site** (main site) for any user-facing or shared URLs. *guitartrainer.lan is for local development only.*
+
 **Live demo:** [https://training.statecollegeguitarlessons.site](https://training.statecollegeguitarlessons.site)
 
 **New here?** Follow the step-by-step walkthrough: [Guitar Modes, Chords, and Pentatonic Scales Trainer](https://app.tango.us/app/workflow/Guitar-Modes--Chords--and-Pentatonic-Scales-Trainer-3780d3c0c45445aea094b5f028075237) — use this guide to get the most out of the app.

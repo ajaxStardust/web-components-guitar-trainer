@@ -170,14 +170,10 @@ export function buildSeventhFromDegree(degree, tonic) {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  PENTATONIC — same architecture as triad: from the current mode (degree).
-//  Pentatonic = degrees 1, 2, 3, 5, 6 of that mode (e.g. Ionian → 1,2,3,5,6).
+//  PENTATONIC — degrees 1, 2, 3, 5, 6 of the mode (no 4 or 7 → no half steps).
 // ─────────────────────────────────────────────────────────────
-//
-// LLM NOTE: Same pattern as buildTriadFromDegree: build mode from degree, filter.
-//
 export function buildPentatonicFromDegree(degree, tonic) {
   const mode = buildModeFromDegree(degree, tonic);
-  const wanted = new Set([1, 2, 3, 5, 6]);
-  return mode.filter(n => wanted.has(n.degree));
+  const PENTATONIC_DEGREES = [1, 2, 3, 5, 6];
+  return mode.filter(n => PENTATONIC_DEGREES.includes(n.degree));
 }

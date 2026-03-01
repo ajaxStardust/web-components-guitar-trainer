@@ -110,8 +110,20 @@ export class GuitarFretboard extends HTMLElement {
     const yForStringIndex = (sIdx) => (stringCount - sIdx) * stringHeight;
     const yMapleTop = yForStringIndex(stringCount - 1);
     const yMapleBottom = yForStringIndex(0);
-    const degree = this.context && this.context.degree != null ? this.context.degree : 1;
-    const { minFret, maxFret } = getPositionFretRange(degree, frets);
+    const litFretsByString = Array.from({ length: STRING_OPEN_SEMITONES.length }, () => []);
+    this._litPositions.forEach((key) => {
+      const dash = key.indexOf("-");
+      if (dash < 0) return;
+      const sIdx = parseInt(key.slice(0, dash), 10);
+      const fret = parseInt(key.slice(dash + 1), 10);
+      if (sIdx >= 0 && sIdx < litFretsByString.length && Number.isFinite(fret)) litFretsByString[sIdx].push(fret);
+    });
+    const fingerRangeByString = litFretsByString.map((frets) => {
+      if (frets.length === 0) return null;
+      const minF = Math.min(...frets);
+      const maxF = Math.max(...frets);
+      return maxF - minF + 1 === 4 ? { minFret: minF, maxFret: maxF } : null;
+    });
 
     const svgParts = [];
     svgParts.push(`<svg viewBox="0 0 ${width} ${height}" width="100%" height="100%">`);
@@ -175,10 +187,12 @@ export class GuitarFretboard extends HTMLElement {
           const fillOpacity = isLit ? (isChordTone ? "1" : FILL_LIT_OPACITY) : UNLIT_OPACITY;
           const stroke = "#333";
           const strokeOpacity = isLit ? "1" : "0.5";
-          const finger = f >= minFret && f <= maxFret ? f - minFret + 1 : null;
+          const range = fingerRangeByString[sIdx];
+          const finger = range && f >= range.minFret && f <= range.maxFret ? f - range.minFret + 1 : null;
           const showFinger = isLit && finger != null;
+          const fingerFill = (degree === 3 || degree === 5) ? "#fff" : "#222";
           const fingerText = showFinger
-            ? `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${Math.max(10, r * 1.2)}" font-weight="700" fill="#fff" pointer-events="none">${finger}</text>`
+            ? `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${Math.max(10, r * 1.2)}" font-weight="700" fill="${fingerFill}" pointer-events="none">${finger}</text>`
             : "";
           svgParts.push(
             `<g data-note="${note}" data-string="${sIdx}" data-fret="${f}"><circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" fill-opacity="${fillOpacity}" stroke="${stroke}" stroke-opacity="${strokeOpacity}"/>${fingerText}</g>`

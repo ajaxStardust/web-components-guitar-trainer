@@ -37,7 +37,9 @@ import "./chord-diagram.js";
 
 function updateAllComponents({ type, degree, tonic, chordForm }) {
 
-    const deg = Number(degree) || 1;
+    let deg = Number(degree) || 1;
+    const isPentatonic = type === "pentatonic";
+    if (isPentatonic) deg = 1;
     const useSeventh = type === "chord" && chordForm === "7th";
 
     let answerKey;
@@ -57,7 +59,8 @@ function updateAllComponents({ type, degree, tonic, chordForm }) {
     const displayMode = displayModeEl ? displayModeEl.value : "show";
     const modeName = getModeName(deg);
     const frets = 15;
-    const minFret = Math.max(0, 2 + (deg - 1) * 2);
+    const geometryDeg = isPentatonic ? 1 : deg;
+    const minFret = Math.max(0, 2 + (geometryDeg - 1) * 2);
     const maxFret = Math.min(frets, minFret + 3);
     const ctx = {
         type,
@@ -80,6 +83,9 @@ function updateAllComponents({ type, degree, tonic, chordForm }) {
     if (piano && piano.setAnswerKey) piano.setAnswerKey(answerKey, ctx);
     if (panel && panel.setAnswerKey) panel.setAnswerKey(answerKey, ctx);
     if (chordDiagram && chordDiagram.setAnswerKey) chordDiagram.setAnswerKey(answerKey, ctx);
+
+    const chordDiagramRow = document.querySelector("#chord-diagram-row");
+    if (chordDiagramRow) chordDiagramRow.style.display = isPentatonic ? "none" : "";
 }
 
 // LLM NOTE (BOOTSTRAP TIMING): Module scripts can run after DOMContentLoaded.
@@ -121,6 +127,24 @@ function runInit() {
 
     const testSoundBtn = document.getElementById("testSound");
     if (testSoundBtn) testSoundBtn.addEventListener("click", () => playNote("A"));
+
+    const resetBtn = document.getElementById("reset");
+    if (resetBtn) {
+        resetBtn.addEventListener("click", () => {
+            stopSequencer();
+            const typeSelect = document.querySelector("#chordmode");
+            const degreeSelect = document.querySelector("#degree");
+            const tonicSelect = document.querySelector("#tonic");
+            const chordFormSelect = document.querySelector("#chordForm");
+            if (!typeSelect || !degreeSelect || !tonicSelect) return;
+            updateAllComponents({
+                type: typeSelect.value,
+                degree: degreeSelect.value,
+                tonic: tonicSelect.value,
+                chordForm: chordFormSelect ? chordFormSelect.value : "triad"
+            });
+        });
+    }
 
     const playBtn = document.getElementById("playSequence");
     if (playBtn) {

@@ -119,7 +119,7 @@ export class ChordDiagram extends HTMLElement {
     }
 
     const tonicPosition = this.getTonicPosition(noteToDegree, allowedDegrees, minFret, maxFret);
-    const r = Math.min(colW, rowH) * 0.35;
+    const candidates = [];
     this._selections.forEach((sel) => {
       const { stringIndex, fret, note } = sel;
       if (stringIndex < 0 || stringIndex >= numStrings) return;
@@ -127,6 +127,19 @@ export class ChordDiagram extends HTMLElement {
       const degree = noteToDegree.get(note);
       if (degree == null || !allowedDegrees.has(degree)) return;
       if (this.isBehindTonic(stringIndex, fret, tonicPosition)) return;
+      candidates.push(sel);
+    });
+    const onePerString = [];
+    for (let s = 0; s < numStrings; s++) {
+      const onString = candidates.filter((c) => c.stringIndex === s);
+      if (onString.length === 0) continue;
+      const lowest = onString.reduce((a, b) => (a.fret <= b.fret ? a : b));
+      onePerString.push(lowest);
+    }
+    const r = Math.min(colW, rowH) * 0.35;
+    onePerString.forEach((sel) => {
+      const { stringIndex, fret, note } = sel;
+      const degree = noteToDegree.get(note);
       const fill = DEGREE_FILL[degree] || FILL_OTHER;
       const cx = pad + stringIndex * colW;
       const cy = pad + (fret - minFret) * rowH + rowH / 2;

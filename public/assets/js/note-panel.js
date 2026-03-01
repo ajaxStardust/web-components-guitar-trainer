@@ -157,26 +157,40 @@ export class NotePanel extends HTMLElement {
 
   render() {
     const ctx = this.context;
-    const key = ctx && ctx.tonic != null ? escapeHtml(ctx.tonic) : "—";
-    const mode = ctx && (ctx.modeName || ctx.degree != null) ? escapeHtml(ctx.modeName || "Degree " + ctx.degree) : "—";
-    const degree = ctx && ctx.degree != null ? String(ctx.degree) : "—";
-    const quality = ctx && ctx.quality ? escapeHtml(ctx.quality) : "—";
+    const isPentatonic = ctx && ctx.type === "pentatonic";
 
-    const headerHtml =
-      "<div class=\"theory-header\">" +
-      "<span class=\"theory-label\">Key</span> " + key + " <span class=\"theory-sep\">|</span> " +
-      "<span class=\"theory-label\">Mode</span> " + mode + " <span class=\"theory-sep\">|</span> " +
-      "<span class=\"theory-label\">Degree</span> " + escapeHtml(degree) + " <span class=\"theory-sep\">|</span> " +
-      "<span class=\"theory-label\">Chord</span> " + quality +
-      "</div>";
-
-    const legendHtml =
-      "<div class=\"legend\">" +
-      "<span class=\"legend-chip first\">First</span>" +
-      "<span class=\"legend-chip third\">third</span>" +
-      "<span class=\"legend-chip fifth\">fifth</span>" +
-      "</div>" +
-      "<div class=\"finger-legend\">Fingers (4-fret span): 1 = index, 2 = middle, 3 = ring, 4 = pinky</div>";
+    let headerHtml, legendHtml;
+    if (isPentatonic) {
+      const key = ctx && ctx.tonic != null ? escapeHtml(ctx.tonic) : "—";
+      const fiveTones = this.answerKey.length
+        ? this.answerKey.map((n) => escapeHtml(n.note)).join(" ")
+        : "—";
+      headerHtml =
+        "<div class=\"theory-header\">" +
+        "<span class=\"theory-label\">Key</span> " + key + " <span class=\"theory-sep\">·</span> " +
+        "<span class=\"theory-label\">Pentatonic</span> (5 notes)" +
+        "</div>" +
+        "<div class=\"pentatonic-tones\">" + fiveTones + "</div>" +
+        "<div class=\"pentatonic-degrees\">Scale degrees: 1, 2, 3, 5, 6</div>";
+      legendHtml = "<div class=\"finger-legend\">Fingers (when lit tones span 4 frets): 1 = index, 2 = middle, 3 = ring, 4 = pinky</div>";
+    } else {
+      const key = ctx && ctx.tonic != null ? escapeHtml(ctx.tonic) : "—";
+      const mode = ctx && (ctx.modeName || ctx.degree != null) ? escapeHtml(ctx.modeName || "Degree " + ctx.degree) : "—";
+      const degree = ctx && ctx.degree != null ? String(ctx.degree) : "—";
+      const quality = ctx && ctx.quality ? escapeHtml(ctx.quality) : "—";
+      headerHtml =
+        "<div class=\"theory-header\">" +
+        "<div class=\"theory-mode-title\">" + mode + "</div>" +
+        "<div class=\"theory-meta\">Key of " + key + " <span class=\"theory-sep\">·</span> Degree " + escapeHtml(degree) + " <span class=\"theory-sep\">·</span> " + quality + "</div>" +
+        "</div>";
+      legendHtml =
+        "<div class=\"legend\">" +
+        "<span class=\"legend-chip first\">First</span>" +
+        "<span class=\"legend-chip third\">third</span>" +
+        "<span class=\"legend-chip fifth\">fifth</span>" +
+        "</div>" +
+        "<div class=\"finger-legend\">Fingers (when lit tones span 4 frets): 1 = index, 2 = middle, 3 = ring, 4 = pinky</div>";
+    }
 
     const tableHtml =
       this._selections.length > 0
@@ -186,9 +200,11 @@ export class NotePanel extends HTMLElement {
     this.shadowRoot.innerHTML = `
             <style>
                 :host { display: block; font-family: system-ui, sans-serif; color: #222; }
-                .theory-header { font-size: 0.9rem; margin-bottom: 0.35rem; }
+                .theory-header { margin-bottom: 0.5rem; }
+                .theory-mode-title { font-size: 1.35rem; font-weight: 700; color: #1a1a1a; letter-spacing: 0.03em; font-family: Georgia, "Palatino Linotype", Palatino, serif; margin-bottom: 0.2rem; }
+                .theory-meta { font-size: 0.8rem; color: #555; font-weight: 500; }
                 .theory-label { font-weight: 600; color: #444; }
-                .theory-sep { color: #888; margin: 0 0.25rem; }
+                .theory-sep { color: #999; margin: 0 0.2rem; font-weight: 400; }
                 .legend { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; font-size: 0.85rem; }
                 .legend-chip { padding: 0.2rem 0.5rem; border-radius: 4px; color: #fff; font-weight: 600; }
                 .legend-chip.first { background: #ffc107; color: #222; }
@@ -199,11 +215,13 @@ export class NotePanel extends HTMLElement {
                 .table-wrap table { width: 100%; border-collapse: collapse; margin-top: 0.25rem; font-size: 0.9rem; }
                 .table-wrap th, .table-wrap td { border: 1px solid #ccc; padding: 0.35rem 0.6rem; text-align: center; }
                 .table-wrap th { background: #333; color: #f5f5f5; }
-                .placeholder { color: #666; margin-top: 0.5rem; }
+                .placeholder { color: #666; margin-top: 0.5rem; font-family: Georgia, "Palatino Linotype", "Book Antiqua", Palatino, serif; font-style: italic; letter-spacing: 0.02em; }
                 .tone-cell.degree-1 { background: #ffc107; color: #222; font-weight: 600; }
                 .tone-cell.degree-3 { background: #5b5b9e; color: #fff; font-weight: 600; }
                 .tone-cell.degree-5 { background: #5a8c5a; color: #fff; font-weight: 600; }
                 .tone-cell.degree-2, .tone-cell.degree-4, .tone-cell.degree-6, .tone-cell.degree-7 { color: #666; }
+                .pentatonic-tones { font-size: 1rem; font-weight: 600; color: #333; margin: 0.35rem 0 0.15rem 0; letter-spacing: 0.05em; }
+                .pentatonic-degrees { font-size: 0.8rem; color: #555; margin-bottom: 0.5rem; }
             </style>
             ${headerHtml}
             ${legendHtml}

@@ -51,6 +51,136 @@ h2 {
     color: #222;
 }
 
+/* ============================================================================
+   HEADER (balances footer: same image + overlay treatment)
+   ============================================================================ */
+.trainer-header {
+    position: relative;
+    margin: -16px -16px 0;
+    margin-left: calc(-1 * (16px + env(safe-area-inset-left, 0)));
+    margin-right: calc(-1 * (16px + env(safe-area-inset-right, 0)));
+    margin-top: calc(-16px - env(safe-area-inset-top, 0));
+    background-color: #f2e7d5;
+    border-bottom: 2px solid #c4ad8a;
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+    min-height: 200px;
+}
+
+.trainer-header-bg {
+    position: absolute;
+    inset: 0;
+}
+
+.trainer-header-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 200px;
+    max-height: 280px;
+    object-fit: cover;
+    object-position: center top;
+    vertical-align: middle;
+}
+
+.trainer-header-overlay {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    max-height: 280px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    background: linear-gradient(to bottom, rgba(242, 231, 213, 0.4) 0%, rgba(242, 231, 213, 0.78) 100%);
+}
+
+.trainer-header-overlay .logo-img {
+    max-width: 280px;
+    height: auto;
+    display: block;
+}
+
+.trainer-header-title {
+    margin: 0.35rem 0 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #222;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+    line-height: 1.3;
+}
+
+.trainer-header-overlay .header-links {
+    margin-top: 0.5rem;
+}
+
+.header-links {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.support-blurb {
+    max-width: 520px;
+    margin: 1rem auto 0;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: #444;
+    text-align: center;
+}
+
+.support-blurb p {
+    margin: 0;
+}
+
+.support-blurb a {
+    color: #2a5a8a;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.support-blurb a:hover {
+    text-decoration: underline;
+}
+
+a.instructions-link {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+    background: #f0f0f0;
+    border: 1px solid #bbb;
+    border-radius: 6px;
+    text-decoration: none;
+}
+
+a.instructions-link:hover {
+    background: #e5e5e5;
+    border-color: #999;
+}
+
+a.bmc-link {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #222;
+    background: #ffdd00;
+    border: 1px solid #e6c200;
+    border-radius: 6px;
+    text-decoration: none;
+}
+
+a.bmc-link:hover {
+    background: #e6c200;
+    color: #222;
+}
+
 
 /* ============================================================================
    CONTROL BAR
@@ -69,6 +199,13 @@ h2 {
 #controls label {
     font-weight: bold;
     color: #333;
+}
+
+#controls .control-hint {
+    font-size: 0.85rem;
+    color: #666;
+    margin-left: 0.35rem;
+    align-self: center;
 }
 
 select {
@@ -184,6 +321,88 @@ note-panel {
 
 chord-diagram {
     display: block;
+}
+
+
+/* ============================================================================
+   RESPONSIVE BEHAVIOR
+   LLM NOTE:
+   • Only affects layout containers.
+   • Does not affect component internals.
+   ============================================================================ */
+/* ============================================================================
+   FOOTER
+   LLM NOTE:
+   • Matches maple theme (#f2e7d5, #c4ad8a) and page bg (#f7f7f7) so the
+     footer strip and generic headstock-morph image feel cohesive.
+   • Overlay text from pedagogy sits on top of the footer image.
+   ============================================================================ */
+.trainer-footer {
+    margin-top: 2rem;
+    margin-left: calc(-16px - env(safe-area-inset-left, 0));
+    margin-right: calc(-16px - env(safe-area-inset-right, 0));
+    margin-bottom: calc(-16px - env(safe-area-inset-bottom, 0));
+    position: relative;
+    background-color: #f2e7d5;
+    border-top: 2px solid #c4ad8a;
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
+    min-height: 200px;
+}
+
+.trainer-footer-bg {
+    position: absolute;
+    inset: 0;
+}
+
+.trainer-footer-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 200px;
+    max-height: 280px;
+    object-fit: cover;
+    object-position: center;
+    vertical-align: middle;
+}
+
+.trainer-footer-overlay {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    max-height: 280px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    background: linear-gradient(to bottom, rgba(242, 231, 213, 0.4) 0%, rgba(242, 231, 213, 0.78) 100%);
+}
+
+.trainer-footer-quote {
+    margin: 0;
+    max-width: 28em;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: #222;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+
+.trainer-footer-attribution {
+    margin: 0.5rem 0 0;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.trainer-footer-attribution a {
+    color: #2a5a8a;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.trainer-footer-attribution a:hover {
+    text-decoration: underline;
 }
 
 
