@@ -5,20 +5,34 @@
 // play (triggered by user click, so autoplay policy is satisfied). Single
 // oscillator + gain envelope; no samples or external files.
 
-const NOTE_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const FLAT_ALIASES = { "D#": "Eb", "G#": "Ab", "A#": "Bb" };
 
 function normalizeNote(note) {
   return FLAT_ALIASES[note] || note;
 }
 
-// A4 = 440 Hz, MIDI 69. Note names map to semitone index 0–11; we use octave 4.
+// Explicit note name → semitone (0–11), C=0. Matches music-theory.js so playback matches display.
+const NOTE_TO_SEMITONE = {
+  C: 0, "C#": 1, Db: 1,
+  D: 2, "D#": 3, Eb: 3,
+  E: 4, Fb: 4, "E#": 5,
+  F: 5, "F#": 6, Gb: 6,
+  G: 7, "G#": 8, Ab: 8,
+  A: 9, "A#": 10, Bb: 10,
+  B: 11, Cb: 11
+};
+
+// A4 = 440 Hz, MIDI 69.
+function midiToFrequency(midi) {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
 function noteNameToFrequency(noteName) {
   const n = normalizeNote(noteName);
-  const index = NOTE_NAMES.indexOf(n);
-  if (index < 0) return null;
-  const midi = 60 + index; // C4 = 60
-  return 440 * Math.pow(2, (midi - 69) / 12);
+  const semitone = NOTE_TO_SEMITONE[n];
+  if (semitone === undefined) return null;
+  const midi = 60 + semitone; // C4 = 60, single octave
+  return midiToFrequency(midi);
 }
 
 let audioContext = null;
@@ -39,10 +53,41 @@ export function ensureAudioReady() {
 }
 
 /**
- * Play a short tone for the given note name (e.g. "G", "Eb").
+ * Play a short tone at the given MIDI note (e.g. 60 = C4).
+ * Used by the sequencer so the scale can ascend (no B→C drop to lower octave).
+ */
+export function playNoteAtMidi(midi, durationMs = 200) {
+  const freq = midiToFrequency(midi);
+  if (!Number.isFinite(freq) || freq <= 0) return;
+  try {
+    const ctx = getContext();
+    function startTone() {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durationMs / 1000);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + durationMs / 1000);
+    }
+    if (ctx.state === "suspended") {
+      ctx.resume().then(startTone).catch((err) => console.warn("Sound: could not resume AudioContext:", err));
+    } else {
+      startTone();
+    }
+  } catch (err) {
+    console.warn("Sound: playNoteAtMidi failed:", err);
+  }
+}
+
+/**
+ * Play a short tone for the given note name (e.g. "G", "Eb") in octave 4.
  * Called from main.js on fret-note-click or piano-key-click.
  * durationMs: length of the tone in ms (default 200).
- * LLM NOTE: First play is on user click; we resume context if suspended so audio works in strict browsers.
  */
 export function playNote(noteName, durationMs = 200) {
   if (!noteName) return;

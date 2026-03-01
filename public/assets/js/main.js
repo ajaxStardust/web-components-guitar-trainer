@@ -28,7 +28,7 @@
 
 import { buildModeFromDegree, buildTriadFromDegree, buildPentatonicFromDegree, buildSeventhFromDegree, getModeName, getTriadQuality, getSeventhQuality } from "./music-theory.js";
 import { initUIController } from "./ui-controller.js";
-import { playNote, ensureAudioReady } from "./sound.js";
+import { playNote, playNoteAtMidi, ensureAudioReady } from "./sound.js";
 import "./guitar-fretboard.js";
 import "./guitar-fret-markers.js";
 import "./piano-keyboard.js";
@@ -177,10 +177,20 @@ function runInit() {
             const SEQUENCE_START_DELAY_MS = 120;
 
             ensureAudioReady().then(() => {
+                // Ascending scale: assign MIDI so each note is >= previous (no B→C drop to lower octave).
+                let prevMidi = null;
                 answerKey.forEach((noteObj, i) => {
                     const id = setTimeout(() => {
                         const note = noteObj.note;
-                        playNote(note);
+                        const semitone = noteObj.semitones;
+                        if (semitone == null) {
+                            playNote(note);
+                        } else {
+                            const base = 60 + semitone;
+                            const midi = prevMidi == null ? base : base + 12 * Math.max(0, Math.ceil((prevMidi - base) / 12));
+                            prevMidi = midi;
+                            playNoteAtMidi(midi);
+                        }
                         if (panel && typeof panel.setActiveNote === "function") panel.setActiveNote(note, true);
                         if (guitar && typeof guitar.flashNote === "function") guitar.flashNote(note);
                         if (piano && typeof piano.flashNote === "function") piano.flashNote(note);
